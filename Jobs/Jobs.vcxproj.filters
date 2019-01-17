@@ -15,11 +15,17 @@
     <ClInclude Include="Include\Assert.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Fiber.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Logging.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Testing.cpp" />
+    <ClCompile Include="Source\Fiber.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

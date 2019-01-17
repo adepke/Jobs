@@ -2,10 +2,7 @@
 
 #include <ostream>
 
-// Set this to 1 to disable logging output.
-#define JOBS_NO_LOG 0
-
-#if !JOBS_NO_LOG
+#ifndef JOBS_DISABLE_LOGGING
 #define JOBS_LOG(Message, ...) LogManager::Get().Log(Message, ## __VA_ARGS__)
 #else
 #define JOBS_LOG(Message, ...) do {} while (0)
