@@ -61,14 +61,14 @@
 
 void FiberEntry(void* Data)
 {
-	JOBS_LOG("Fiber entry.");
+	JOBS_LOG(LogLevel::Log, "Fiber entry.");
 }
 
 Fiber::Fiber(void* Arg) : Data(Arg) {}
 
 Fiber::Fiber(std::size_t StackSize, decltype(&FiberEntry) Entry, void* Arg) : Data(Arg)
 {
-	JOBS_LOG("Building fiber.");
+	JOBS_LOG(LogLevel::Log, "Building fiber.");
 	JOBS_ASSERT(StackSize > 0, "Stack size must be greater than 0.");
 
 #if PLATFORM_WINDOWS
@@ -97,7 +97,7 @@ Fiber::Fiber(Fiber&& Other) noexcept
 
 Fiber::~Fiber()
 {
-	JOBS_LOG("Destroying fiber.");
+	JOBS_LOG(LogLevel::Log, "Destroying fiber.");
 	JOBS_ASSERT(Context, "Fiber had no execution context.");
 
 #if PLATFORM_WINDOWS
@@ -117,7 +117,7 @@ Fiber& Fiber::operator=(Fiber&& Other) noexcept
 
 void Fiber::Schedule(const Fiber& From)
 {
-	JOBS_LOG("Scheduling fiber.");
+	JOBS_LOG(LogLevel::Log, "Scheduling fiber.");
 
 #if PLATFORM_WINDOWS
 	// #TODO Should this be windows only? Explore behavior of posix fibers swapping to themselves.

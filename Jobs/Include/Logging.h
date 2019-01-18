@@ -3,9 +3,9 @@
 #include <ostream>
 
 #ifndef JOBS_DISABLE_LOGGING
-#define JOBS_LOG(Message, ...) LogManager::Get().Log(Message, ## __VA_ARGS__)
+#define JOBS_LOG(Level, Format, ...) LogManager::Get().Log(Level, Format, ## __VA_ARGS__)
 #else
-#define JOBS_LOG(Message, ...) do {} while (0)
+#define JOBS_LOG(Level, Format, ...) do {} while (0)
 #endif
 
 enum class LogLevel
@@ -34,7 +34,7 @@ public:
 		return Singleton;
 	}
 
-	void Log(const std::string& Message, LogLevel Level = LogLevel::Log);
+	void Log(LogLevel Level, const std::string& Format, ...);
 
 	void SetOutputDevice(std::ostream& Device);
 };
