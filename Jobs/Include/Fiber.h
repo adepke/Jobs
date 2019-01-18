@@ -8,7 +8,7 @@ void FiberEntry(void* Data);
 class Fiber
 {
 private:
-	void* NativeHandle = nullptr;
+	void* Context = nullptr;
 	void* Data = nullptr;
 
 public:
@@ -21,7 +21,7 @@ public:
 	Fiber& operator=(const Fiber&) = delete;
 	Fiber& operator=(Fiber&& Other) noexcept;
 
-	void Schedule();
+	void Schedule(const Fiber& From);
 
 	void Swap(Fiber& Other) noexcept;
 
