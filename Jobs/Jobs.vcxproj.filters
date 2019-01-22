@@ -18,6 +18,9 @@
     <ClInclude Include="Include\Fiber.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Spinlock.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Logging.cpp">
@@ -25,6 +28,9 @@
     </ClCompile>
     <ClCompile Include="Testing.cpp" />
     <ClCompile Include="Source\Fiber.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Spinlock.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>

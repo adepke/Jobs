@@ -38,7 +38,9 @@ void LogManager::Log(LogLevel Level, const std::string& Format, ...)
 
 	Output += Formatted + "\n";
 
+	Lock.Lock();
 	*OutputDevice << Output.c_str();
+	Lock.Unlock();
 }
 
 void LogManager::SetOutputDevice(std::ostream& Device)

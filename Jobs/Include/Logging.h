@@ -2,6 +2,8 @@
 
 #include <ostream>
 
+#include "Spinlock.h"
+
 #ifndef JOBS_DISABLE_LOGGING
 #define JOBS_LOG(Level, Format, ...) LogManager::Get().Log(Level, Format, ## __VA_ARGS__)
 #else
@@ -18,6 +20,8 @@ enum class LogLevel
 class LogManager
 {
 private:
+	Spinlock Lock;
+
 	std::ostream* OutputDevice = nullptr;
 
 public:
