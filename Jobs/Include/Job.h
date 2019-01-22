@@ -2,9 +2,8 @@
 
 struct Job
 {
-public:
-	Job() {}
-	~Job() {}
+	using EntryType = void(*)(void* Data);
 
-	virtual void Execute() = 0;
+	EntryType Entry;
+	void* Data;
 };
