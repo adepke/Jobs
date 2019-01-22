@@ -7,6 +7,12 @@
     <Filter Include="Include">
       <UniqueIdentifier>{f1a5faa9-c37b-424a-a1e1-53f383033a72}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ThirdParty">
+      <UniqueIdentifier>{9cafb4be-bd84-4dfe-a157-7862ee6f7717}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\ConcurrentQueue">
+      <UniqueIdentifier>{e6be2eab-e694-431d-ac03-70a73a4e23b0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\Logging.h">
@@ -20,6 +26,12 @@
     </ClInclude>
     <ClInclude Include="Include\Spinlock.h">
       <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Job.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\ConcurrentQueue\concurrentqueue.h">
+      <Filter>ThirdParty\ConcurrentQueue</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
