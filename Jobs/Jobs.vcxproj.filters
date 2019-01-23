@@ -33,6 +33,12 @@
     <ClInclude Include="ThirdParty\ConcurrentQueue\concurrentqueue.h">
       <Filter>ThirdParty\ConcurrentQueue</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Manager.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\WindowsMinimal.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Logging.cpp">
@@ -43,6 +49,9 @@
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\Spinlock.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Manager.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>

@@ -7,46 +7,7 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #define PLATFORM_WINDOWS 1
-#define WIN32_LEAN_AND_MEAN
-#define NOGDICAPMASKS
-#define NOVIRTUALKEYCODES
-#define NOWINMESSAGES
-#define NOWINSTYLES
-#define NOSYSMETRICS
-#define NOMENUS
-#define NOICONS
-#define NOKEYSTATES
-#define NOSYSCOMMANDS
-#define NORASTEROPS
-#define NOSHOWWINDOW
-#define NOATOM
-#define NOCLIPBOARD
-#define NOCOLOR
-#define NOCTLMGR
-#define NODRAWTEXT
-#define NOGDI
-#define NOKERNEL
-#define NOUSER
-#define NONLS
-#define NOMB
-#define NOMEMMGR
-#define NOMETAFILE
-#define NOMINMAX
-#define NOMSG
-#define NOOPENFILE
-#define NOSCROLL
-#define NOSERVICE
-#define NOSOUND
-#define NOTEXTMETRIC
-#define NOWH
-#define NOWINOFFSETS
-#define NOCOMM
-#define NOKANJI
-#define NOHELP
-#define NOPROFILER
-#define NODEFERWINDOWPOS
-#define NOMCX
-#include <Windows.h>
+#include "../Include/WindowsMinimal.h"
 #else
 #define PLATFORM_POSIX 1
 #include <ucontext.h>
@@ -98,10 +59,12 @@ Fiber::Fiber(Fiber&& Other) noexcept
 Fiber::~Fiber()
 {
 	JOBS_LOG(LogLevel::Log, "Destroying fiber.");
-	JOBS_ASSERT(Context, "Fiber had no execution context.");
 
 #if PLATFORM_WINDOWS
-	DeleteFiber(Context);
+	if (Context)
+	{
+		DeleteFiber(Context);
+	}
 #else
 	delete[] Context->uc_stack.ss_sp;
 	delete Context;

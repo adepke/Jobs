@@ -123,12 +123,15 @@
     <ClInclude Include="Include\Fiber.h" />
     <ClInclude Include="Include\Job.h" />
     <ClInclude Include="Include\Logging.h" />
+    <ClInclude Include="Include\Manager.h" />
     <ClInclude Include="Include\Spinlock.h" />
+    <ClInclude Include="Include\WindowsMinimal.h" />
     <ClInclude Include="ThirdParty\ConcurrentQueue\concurrentqueue.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Fiber.cpp" />
     <ClCompile Include="Source\Logging.cpp" />
+    <ClCompile Include="Source\Manager.cpp" />
     <ClCompile Include="Source\Spinlock.cpp" />
     <ClCompile Include="Testing.cpp" />
   </ItemGroup>
