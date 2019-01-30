@@ -58,11 +58,12 @@ Fiber::Fiber(Fiber&& Other) noexcept
 
 Fiber::~Fiber()
 {
-	JOBS_LOG(LogLevel::Log, "Destroying fiber.");
-
 #if PLATFORM_WINDOWS
 	if (Context)
 	{
+		// We only want to log when an actual fiber was destroyed, not the shell of a fiber that was moved.
+		JOBS_LOG(LogLevel::Log, "Destroying fiber.");
+
 		DeleteFiber(Context);
 	}
 #else
@@ -78,7 +79,7 @@ Fiber& Fiber::operator=(Fiber&& Other) noexcept
 	return *this;
 }
 
-void Fiber::Schedule(const Fiber& From)
+void Fiber::Schedule(Fiber& From)
 {
 	JOBS_LOG(LogLevel::Log, "Scheduling fiber.");
 
@@ -90,12 +91,20 @@ void Fiber::Schedule(const Fiber& From)
 #else
 	JOBS_ASSERT(swapcontext(static_cast<ucontext_t*>(From.Context), static_cast<ucontext_t*>(Context)) == 0, "Failed to schedule fiber.");
 #endif
+
+	From.Executing.store(false);  // #TODO: Memory order.
+	Executing.store(true);  // #TODO: Memory order.
 }
 
 void Fiber::Swap(Fiber& Other) noexcept
 {
 	std::swap(Context, Other.Context);
 	std::swap(Data, Other.Data);
+}
+
+bool Fiber::IsExecuting() const
+{
+	return Executing.load(std::memory_order_acquire);
 }
 
 std::shared_ptr<Fiber> Fiber::FromThisThread(void* Arg)

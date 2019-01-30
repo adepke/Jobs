@@ -1,59 +1,80 @@
 #include "../Include/Manager.h"
 
-#include "../include/Assert.h"
+#include "../Include/Assert.h"
+#include "../Include/Logging.h"
 #include "../Include/Fiber.h"
 
-#if defined(_WIN32) || defined(_WIN64)
-#define PLATFORM_WINDOWS 1
-#include "../Include/WindowsMinimal.h"
-#else
-#define PLATFORM_POSIX 1
-#include <pthread.h>
-#endif
+void ManagerWorkerEntry(Manager* const Owner)
+{
+	JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
 
-#ifndef PLATFORM_WINDOWS
-#define PLATFORM_WINDOWS 0
-#endif
-#ifndef PLATFORM_POSIX
-#define PLATFORM_POSIX 0
-#endif
+	// #TODO: We need to add a synchronization system to wait for the manager to finish before proceeding. Spinlock here.
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+	// ThisFiber allows us to schedule other fibers.
+	auto& Representation = Owner->Workers[Owner->GetThisThreadID()];
+
+	JOBS_LOG(LogLevel::Log, "Worker Entry | ID: %i", Representation.GetID());
+
+	// We don't have a fiber at this point, so grab an available fiber.
+	auto NextFiberIndex{ Owner->GetAvailableFiber() };
+	if (!Owner->IsValidID(NextFiberIndex))
+	{
+		// #TODO: If we failed to get a new fiber, allocate more.
+	}
+
+	// Schedule the fiber, which executes the work. We will resume here when the manager is shutting down.
+	Owner->Fibers[NextFiberIndex].Schedule(Owner->Workers[Owner->GetThisThreadID()].GetThreadFiber());
+
+	JOBS_LOG(LogLevel::Log, "Worker Shutdown | ID: %i", Representation.GetID());
+}
 
 struct FiberData
 {
-	Manager* Owner;
+	Manager* const Owner;
 };
 
 void ManagerFiberEntry(void* Data)
 {
 	JOBS_ASSERT(Data, "Manager fiber entry missing data.");
-}
 
-void ManagerThreadEntry(std::size_t ID, Manager* const Owner)
-{
-	JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
-}
+	auto FData = static_cast<FiberData*>(Data);
 
-void Manager::SetupThread(std::thread& Thread, std::size_t ThreadNumber)
-{
-#if PLATFORM_WINDOWS
-	SetThreadAffinityMask(Thread.native_handle(), static_cast<std::size_t>(1) << ThreadNumber);
+	while (FData->Owner->CanContinue())
+	{
+		auto Job{ std::move(FData->Owner->Dequeue()) };
+		if (Job)
+		{
+			Job->Entry(Job->Data);
+		}
 
-#else
-	cpu_set_t CPUSet;
-	CPU_ZERO(&CPUSet);
-	CPU_SET(ThreadNumber, &CPUSet);
+		else
+		{
+			JOBS_LOG(LogLevel::Log, "No Job");
 
-	JOBS_ASSERT(pthread_setaffinity_np(Thread.native_handle(), sizeof(CPUSet), &CPUSet) == 0, "Error occurred in pthread_setaffinity_np().");
-#endif
+			// #TODO: Add a signal system.
+
+			std::this_thread::sleep_for(std::chrono::milliseconds{1000});
+		}
+	}
+
+	// End of fiber lifetime, we are switching out to the worker thread to perform any final cleanup. We cannot be scheduled again beyond this point.
+	auto& ActiveWorker{ FData->Owner->Workers[FData->Owner->GetThisThreadID()] };
+	ActiveWorker.GetThreadFiber().Schedule(FData->Owner->Fibers[ActiveWorker.FiberIndex]);
+
+	JOBS_ASSERT(false, "Dead fiber was rescheduled.");
 }
 
 Manager::Manager() {}
 
 Manager::~Manager()
 {
+	// #TODO: Signal exit.
+
 	for (auto& Worker : Workers)
 	{
-		Worker.join();
+		Worker.GetHandle().join();
 	}
 
 	delete Data;
@@ -75,36 +96,20 @@ void Manager::Initialize(std::size_t ThreadCount)
 		ThreadCount = std::thread::hardware_concurrency();
 	}
 
-	JobQueues.reserve(ThreadCount);
 	Workers.reserve(ThreadCount);
 	
-	for (auto Iter = 0; Iter < ThreadCount; ++Iter)
+	for (std::size_t Iter = 0; Iter < ThreadCount; ++Iter)
 	{
-		JobQueues.push_back(moodycamel::ConcurrentQueue<Job>{});
-		Workers.push_back(std::thread{ &ManagerThreadEntry, Iter, this });
-
-		SetupThread(Workers[Iter], Iter);
+		Workers.push_back(std::move(Worker{ this, Iter, &ManagerWorkerEntry }));
 	}
 }
 
-template <typename U>
-void Manager::Enqueue(U&& Job)
-{
-	// #TODO: Cycle the default thread queue to enqueue in.
-	JobQueues[0].enqueue(Job);
-}
-
-template <typename U>
-void Manager::Enqueue(std::size_t ID, U&& Job)
-{
-	JobQueues[ID].enqueue(Job);
-}
-
-std::optional<Job> Manager::Dequeue(std::size_t ID)
+std::optional<Job> Manager::Dequeue()
 {
 	Job Result{};
+	auto ThisThreadID{ GetThisThreadID() };
 
-	if (JobQueues[ID].try_dequeue(Result))
+	if (Workers[ThisThreadID].GetJobQueue().try_dequeue(Result))
 	{
 		return Result;
 	}
@@ -112,10 +117,11 @@ std::optional<Job> Manager::Dequeue(std::size_t ID)
 	else
 	{
 		// Our queue is empty, time to steal.
+		// #TODO: Implement a smart stealing algorithm.
 
 		for (auto Iter = 0; Iter < Workers.size(); ++Iter)
 		{
-			if (JobQueues[(Iter + ID) % Workers.size()].try_dequeue(Result))
+			if (Workers[(Iter + ThisThreadID) % Workers.size()].GetJobQueue().try_dequeue(Result))
 			{
 				return Result;
 			}
@@ -123,4 +129,44 @@ std::optional<Job> Manager::Dequeue(std::size_t ID)
 	}
 
 	return std::nullopt;
+}
+
+std::size_t Manager::GetThisThreadID() const
+{
+	auto ThisID{ std::this_thread::get_id() };
+
+	for (auto& Worker : Workers)
+	{
+		if (Worker.GetNativeID() == ThisID)
+		{
+			return Worker.GetID();
+		}
+	}
+
+	return InvalidID;
+}
+
+bool Manager::IsValidID(std::size_t ID) const
+{
+	return ID != InvalidID;
+}
+
+bool Manager::CanContinue() const
+{
+	// #TODO: Implement exit signaling through atomic flag.
+
+	return true;
+}
+
+std::size_t Manager::GetAvailableFiber()
+{
+	for (auto Index = 0; Index < Fibers.size(); ++Index)
+	{
+		if (!Fibers[Index].IsExecuting())
+		{
+			return Index;
+		}
+	}
+
+	return InvalidID;
 }

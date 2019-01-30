@@ -126,6 +126,7 @@
     <ClInclude Include="Include\Manager.h" />
     <ClInclude Include="Include\Spinlock.h" />
     <ClInclude Include="Include\WindowsMinimal.h" />
+    <ClInclude Include="Include\Worker.h" />
     <ClInclude Include="ThirdParty\ConcurrentQueue\concurrentqueue.h" />
   </ItemGroup>
   <ItemGroup>
@@ -133,6 +134,7 @@
     <ClCompile Include="Source\Logging.cpp" />
     <ClCompile Include="Source\Manager.cpp" />
     <ClCompile Include="Source\Spinlock.cpp" />
+    <ClCompile Include="Source\Worker.cpp" />
     <ClCompile Include="Testing.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

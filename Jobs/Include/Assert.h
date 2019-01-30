@@ -3,6 +3,9 @@
 #include <iostream>  // std::cerr
 #include <exception>  // std::terminate
 
+// TEMP
+#undef _DEBUG
+
 #if _DEBUG || NDEBUG
 #define JOBS_ASSERT(Expression, ...) \
 	do \

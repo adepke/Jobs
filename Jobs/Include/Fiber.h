@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>  // std::atomic_flag
 #include <cstddef>  // std::size_t
 #include <memory>  // std::shared_ptr
 
@@ -11,6 +12,8 @@ private:
 	void* Context = nullptr;
 	void* Data = nullptr;
 
+	std::atomic_bool Executing = false;
+
 public:
 	Fiber(void* Arg);  // Used for converting a thread to a fiber.
 	Fiber(std::size_t StackSize, decltype(&FiberEntry) Entry, void* Arg);
@@ -21,9 +24,11 @@ public:
 	Fiber& operator=(const Fiber&) = delete;
 	Fiber& operator=(Fiber&& Other) noexcept;
 
-	void Schedule(const Fiber& From);
+	void Schedule(Fiber& From);
 
 	void Swap(Fiber& Other) noexcept;
+
+	bool IsExecuting() const;
 
 	static std::shared_ptr<Fiber> FromThisThread(void* Arg);
 };
