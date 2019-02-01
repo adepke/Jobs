@@ -46,7 +46,11 @@ Worker::Worker(Manager* const InOwner, std::size_t InID, EntryType Entry) : Owne
 
 Worker::~Worker()
 {
-	JOBS_LOG(LogLevel::Log, "Destroying thread.");
+	if (ThreadHandle.native_handle())
+	{
+		// Only log if we're not a moved worker shell.
+		JOBS_LOG(LogLevel::Log, "Destroying thread.");
+	}
 
 	// The thread may have already finished, so validate our handle first.
 	if (ThreadHandle.joinable())

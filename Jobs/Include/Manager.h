@@ -8,6 +8,7 @@
 #include <thread>  // std::thread
 #include <optional>  // std::optional
 #include <utility>  // std::pair
+#include "CriticalSection.h"
 
 struct FiberData;
 
@@ -29,6 +30,8 @@ private:
 	static constexpr std::size_t FiberStackSize = 1024 * 1024;  // 1 MB
 
 	static constexpr std::size_t InvalidID = std::numeric_limits<std::size_t>::max();
+
+	CriticalSection FiberPoolLock;
 
 public:
 	Manager();

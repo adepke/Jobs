@@ -6,6 +6,9 @@
 
 void ManagerWorkerEntry(Manager* const Owner)
 {
+	JOBS_LOG(LogLevel::Log, "Worker Entry");
+	return;
+
 	JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
 
 	// #TODO: We need to add a synchronization system to wait for the manager to finish before proceeding. Spinlock here.
@@ -160,13 +163,19 @@ bool Manager::CanContinue() const
 
 std::size_t Manager::GetAvailableFiber()
 {
+	FiberPoolLock.Lock();
+	
 	for (auto Index = 0; Index < Fibers.size(); ++Index)
 	{
 		if (!Fibers[Index].IsExecuting())
 		{
+			FiberPoolLock.Unlock();
+
 			return Index;
 		}
 	}
+
+	FiberPoolLock.Unlock();
 
 	return InvalidID;
 }
