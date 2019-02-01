@@ -35,6 +35,10 @@ Worker::Worker(Manager* const InOwner, std::size_t InID, EntryType Entry) : Owne
 #if PLATFORM_WINDOWS
 	SetThreadAffinityMask(ThreadHandle.native_handle(), static_cast<std::size_t>(1) << InID);
 
+#if _DEBUG || NDEBUG
+	SetThreadDescription(ThreadHandle.native_handle(), L"Jobs Worker");
+#endif
+
 #else
 	cpu_set_t CPUSet;
 	CPU_ZERO(&CPUSet);

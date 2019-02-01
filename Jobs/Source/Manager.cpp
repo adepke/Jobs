@@ -7,7 +7,6 @@
 void ManagerWorkerEntry(Manager* const Owner)
 {
 	JOBS_LOG(LogLevel::Log, "Worker Entry");
-	return;
 
 	JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
 
@@ -171,11 +170,15 @@ std::size_t Manager::GetAvailableFiber()
 		{
 			FiberPoolLock.Unlock();
 
+			JOBS_LOG(LogLevel::Log, "Free Fiber at %i", Index);
+
 			return Index;
 		}
 	}
 
 	FiberPoolLock.Unlock();
+
+	JOBS_LOG(LogLevel::Error, "No free fibers!");
 
 	return InvalidID;
 }

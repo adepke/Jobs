@@ -4,7 +4,7 @@
 #include <exception>  // std::terminate
 
 // TEMP
-#undef _DEBUG
+#if 0
 
 #if _DEBUG || NDEBUG
 #define JOBS_ASSERT(Expression, ...) \
@@ -20,3 +20,8 @@
 #else
 #define JOBS_ASSERT(Expression, ...) do {} while (0)
 #endif
+
+// TEMP
+#endif
+
+#define JOBS_ASSERT(Expression, ...) do {} while (0)
