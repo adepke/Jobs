@@ -31,6 +31,9 @@ void LogManager::Log(LogLevel Level, const std::string& Format, ...)
 
 	std::va_list Args;
 	va_start(Args, &Format);
+
+	Lock.Lock();  // Latest possible point to lock: We need to guard our c_str() buffer resource.
+
 	std::vsnprintf(Buffer, BufferSize, Format.c_str(), Args);
 	va_end(Args);
 
@@ -38,7 +41,7 @@ void LogManager::Log(LogLevel Level, const std::string& Format, ...)
 
 	Output += Formatted + "\n";
 
-	Lock.Lock();
+	//Lock.Lock();  // Can't lock this late, we accessed the c_str() resource.
 	*OutputDevice << Output.c_str();
 	Lock.Unlock();
 }

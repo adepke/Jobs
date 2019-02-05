@@ -26,7 +26,7 @@ void ManagerWorkerEntry(Manager* const Owner)
 		// #TODO: If we failed to get a new fiber, allocate more.
 	}
 
-	JOBS_LOG(LogLevel::Log, "Here");
+	JOBS_LOG(LogLevel::Log, "Worker acquired fiber.");
 
 	// Schedule the fiber, which executes the work. We will resume here when the manager is shutting down.
 	Owner->Fibers[NextFiberIndex].Schedule(Owner->Workers[Owner->GetThisThreadID()].GetThreadFiber());
@@ -177,8 +177,6 @@ std::size_t Manager::GetAvailableFiber()
 			Fibers[Index].Launched.store(true, std::memory_order_seq_cst);  // #TODO: Memory order.
 
 			FiberPoolLock.Unlock();
-
-			JOBS_LOG(LogLevel::Log, "Free Fiber at %i", Index);
 
 			return Index;
 		}
