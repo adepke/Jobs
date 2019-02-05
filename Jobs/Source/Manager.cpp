@@ -6,13 +6,15 @@
 
 void ManagerWorkerEntry(Manager* const Owner)
 {
-	//JOBS_LOG(LogLevel::Log, "Worker Entry");
+	JOBS_LOG(LogLevel::Log, "Worker Entry");
 
 	JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
 
-	// #TODO: We need to add a synchronization system to wait for the manager to finish before proceeding. Spinlock here.
-
-	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+	// Spin until the manager is ready.
+	while (!Owner->Ready.load(std::memory_order_seq_cst)) [[unlikely]]  // #TODO: Memory order.
+	{
+		std::this_thread::yield();
+	}
 
 	// ThisFiber allows us to schedule other fibers.
 	auto& Representation = Owner->Workers[Owner->GetThisThreadID()];
@@ -106,6 +108,8 @@ void Manager::Initialize(std::size_t ThreadCount)
 	{
 		Workers.push_back(std::move(Worker{ this, Iter, &ManagerWorkerEntry }));
 	}
+
+	Ready.store(true, std::memory_order_seq_cst);  // #TODO: Memory order.
 }
 
 std::optional<Job> Manager::Dequeue()

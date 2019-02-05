@@ -33,6 +33,8 @@ private:
 
 	CriticalSection FiberPoolLock;
 
+	std::atomic_bool Ready;
+
 public:
 	Manager();
 	~Manager();
