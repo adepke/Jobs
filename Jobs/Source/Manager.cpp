@@ -6,13 +6,13 @@
 
 void ManagerWorkerEntry(Manager* const Owner)
 {
-	JOBS_LOG(LogLevel::Log, "Worker Entry");
+	//JOBS_LOG(LogLevel::Log, "Worker Entry");
 
 	JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
 
 	// #TODO: We need to add a synchronization system to wait for the manager to finish before proceeding. Spinlock here.
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
 	// ThisFiber allows us to schedule other fibers.
 	auto& Representation = Owner->Workers[Owner->GetThisThreadID()];
@@ -25,6 +25,8 @@ void ManagerWorkerEntry(Manager* const Owner)
 	{
 		// #TODO: If we failed to get a new fiber, allocate more.
 	}
+
+	JOBS_LOG(LogLevel::Log, "Here");
 
 	// Schedule the fiber, which executes the work. We will resume here when the manager is shutting down.
 	Owner->Fibers[NextFiberIndex].Schedule(Owner->Workers[Owner->GetThisThreadID()].GetThreadFiber());
@@ -118,6 +120,8 @@ std::optional<Job> Manager::Dequeue()
 
 	else
 	{
+		//JOBS_LOG(LogLevel::Log, "Stealing...");
+
 		// Our queue is empty, time to steal.
 		// #TODO: Implement a smart stealing algorithm.
 
@@ -163,11 +167,15 @@ bool Manager::CanContinue() const
 std::size_t Manager::GetAvailableFiber()
 {
 	FiberPoolLock.Lock();
+
+	// #TODO: Compare and swap operation instead of spinlock?
 	
 	for (auto Index = 0; Index < Fibers.size(); ++Index)
 	{
-		if (!Fibers[Index].IsExecuting())
+		if (!Fibers[Index].Launched.load(std::memory_order_acquire))
 		{
+			Fibers[Index].Launched.store(true, std::memory_order_seq_cst);  // #TODO: Memory order.
+
 			FiberPoolLock.Unlock();
 
 			JOBS_LOG(LogLevel::Log, "Free Fiber at %i", Index);

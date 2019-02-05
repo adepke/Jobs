@@ -12,7 +12,9 @@ private:
 	void* Context = nullptr;
 	void* Data = nullptr;
 
-	std::atomic_bool Executing = false;
+public:
+	// If we're a fresh fiber or not.
+	std::atomic_bool Launched = false;
 
 public:
 	Fiber(void* Arg);  // Used for converting a thread to a fiber.
@@ -24,11 +26,9 @@ public:
 	Fiber& operator=(const Fiber&) = delete;
 	Fiber& operator=(Fiber&& Other) noexcept;
 
-	void Schedule(Fiber& From);
+	void Schedule(const Fiber& From);
 
 	void Swap(Fiber& Other) noexcept;
-
-	bool IsExecuting() const;
 
 	static std::shared_ptr<Fiber> FromThisThread(void* Arg);
 };
