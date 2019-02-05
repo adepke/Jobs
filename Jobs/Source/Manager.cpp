@@ -4,22 +4,30 @@
 #include "../Include/Logging.h"
 #include "../Include/Fiber.h"
 
+// TEMP
+#include <thread>
+#include <chrono>
+
 void ManagerWorkerEntry(Manager* const Owner)
 {
-	JOBS_LOG(LogLevel::Log, "Worker Entry");
+	JOBS_LOG(LogLevel::Log, "Worker Entry, Prepping Spin");
 
 	JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
 
 	// Spin until the manager is ready.
-	while (!Owner->Ready.load(std::memory_order_seq_cst)) [[unlikely]]  // #TODO: Memory order.
+	while (!Owner->Ready.load(/*std::memory_order_seq_cst*/)) [[unlikely]]  // #TODO: Memory order.
 	{
-		std::this_thread::yield();
+		// TEMP
+		std::this_thread::sleep_for(std::chrono::milliseconds{100});
+		//std::this_thread::yield();
 	}
+
+	JOBS_LOG(LogLevel::Log, "Worker Entry, Finished Spin");
 
 	// ThisFiber allows us to schedule other fibers.
 	auto& Representation = Owner->Workers[Owner->GetThisThreadID()];
 
-	JOBS_LOG(LogLevel::Log, "Worker Entry | ID: %i", Representation.GetID());
+	JOBS_LOG(LogLevel::Log, "Worker Prep to Kick Off Fiber | ID: %i", Representation.GetID());
 
 	// We don't have a fiber at this point, so grab an available fiber.
 	auto NextFiberIndex{ Owner->GetAvailableFiber() };
@@ -124,6 +132,9 @@ std::optional<Job> Manager::Dequeue()
 
 	else
 	{
+		// TEMP
+		std::this_thread::sleep_for(std::chrono::milliseconds{ 200 });
+
 		//JOBS_LOG(LogLevel::Log, "Stealing...");
 
 		// Our queue is empty, time to steal.

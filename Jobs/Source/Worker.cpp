@@ -26,9 +26,10 @@ Worker::Worker(Manager* const InOwner, std::size_t InID, EntryType Entry) : Owne
 
 	JOBS_ASSERT(InOwner, "Worker constructor needs a valid owner.");
 
-	ThreadHandle = std::thread{ [this, &Entry](auto Arg)
+	ThreadHandle = std::thread{ [this, Entry](auto Arg)
 	{
 		ThreadFiber = std::move(Fiber::FromThisThread(nullptr));
+
 		Entry(Arg);
 	}, InOwner };
 
@@ -46,6 +47,9 @@ Worker::Worker(Manager* const InOwner, std::size_t InID, EntryType Entry) : Owne
 
 	JOBS_ASSERT(pthread_setaffinity_np(ThreadHandle.native_handle(), sizeof(CPUSet), &CPUSet) == 0, "Error occurred in pthread_setaffinity_np().");
 #endif
+
+	// TEMP: Patch for manager move()'ing the worker before the thread assumed ownership.
+	std::this_thread::sleep_for(std::chrono::milliseconds{ 50 });
 }
 
 Worker::~Worker()
