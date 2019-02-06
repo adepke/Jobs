@@ -36,6 +36,9 @@ private:
 	std::atomic_bool Ready;
 	std::atomic_bool Shutdown;
 
+	// Used to cycle the worker thread to enqueue in.
+	std::atomic_uint EnqueueIndex;
+
 public:
 	Manager();
 	~Manager();
@@ -68,7 +71,11 @@ void Manager::Enqueue(U&& Job)
 
 	else
 	{
-		// #TODO: Cycle the default thread queue to enqueue in.
-		Workers[0].GetJobQueue().enqueue(std::forward<U>(Job));
+		auto CachedEI{ EnqueueIndex.load() };  // #TODO: Memory order.
+
+		// Note: We might lose an increment here if this runs in parallel, but we would rather suffer that instead of locking.
+		EnqueueIndex.store((CachedEI + 1) % Workers.size());
+
+		Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(Job));  // #TODO: Memory order.
 	}
 }

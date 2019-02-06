@@ -17,8 +17,6 @@ void ManagerWorkerEntry(Manager* const Owner)
 	// ThisFiber allows us to schedule other fibers.
 	auto& Representation{ Owner->Workers[Owner->GetThisThreadID()] };
 
-	JOBS_LOG(LogLevel::Log, "Worker Prep to Kick Off Fiber | ID: %i", Representation.GetID());
-
 	// We don't have a fiber at this point, so grab an available fiber.
 	auto NextFiberIndex{ Owner->GetAvailableFiber() };
 	if (!Owner->IsValidID(NextFiberIndex))
@@ -88,7 +86,7 @@ Manager::~Manager()
 		Worker.GetHandle().join();
 	}
 
-	JOBS_LOG(LogLevel::Log, "Deleting Fiber Data.");
+	JOBS_LOG(LogLevel::Log, "Manager deleting fiber data.");
 
 	delete Data;
 }
@@ -134,8 +132,6 @@ std::optional<Job> Manager::Dequeue()
 	{
 		// TEMP
 		std::this_thread::sleep_for(std::chrono::milliseconds{ 200 });
-
-		//JOBS_LOG(LogLevel::Log, "Stealing...");
 
 		// Our queue is empty, time to steal.
 		// #TODO: Implement a smart stealing algorithm.
