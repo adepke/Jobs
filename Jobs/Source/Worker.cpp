@@ -67,10 +67,6 @@ Worker::~Worker()
 	{
 		ThreadHandle.join();
 	}
-
-	// TEMP: We don't need this, as the worker kills itself.
-	// Delete the fiber after joining, as this will kill the thread.
-	//delete ThreadFiber;
 }
 
 Worker& Worker::operator=(Worker&& Other) noexcept

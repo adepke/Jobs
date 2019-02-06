@@ -4,10 +4,6 @@
 #include "../Include/Logging.h"
 #include "../Include/Fiber.h"
 
-// TEMP
-#include <thread>
-#include <chrono>
-
 void ManagerWorkerEntry(Manager* const Owner)
 {
 	JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
@@ -19,7 +15,7 @@ void ManagerWorkerEntry(Manager* const Owner)
 	}
 
 	// ThisFiber allows us to schedule other fibers.
-	auto& Representation = Owner->Workers[Owner->GetThisThreadID()];
+	auto& Representation{ Owner->Workers[Owner->GetThisThreadID()] };
 
 	JOBS_LOG(LogLevel::Log, "Worker Prep to Kick Off Fiber | ID: %i", Representation.GetID());
 
