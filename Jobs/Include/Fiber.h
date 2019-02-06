@@ -30,5 +30,5 @@ public:
 
 	void Swap(Fiber& Other) noexcept;
 
-	static std::shared_ptr<Fiber> FromThisThread(void* Arg);
+	static Fiber* FromThisThread(void* Arg);
 };

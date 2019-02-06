@@ -10,19 +10,13 @@
 
 void ManagerWorkerEntry(Manager* const Owner)
 {
-	JOBS_LOG(LogLevel::Log, "Worker Entry, Prepping Spin");
-
 	JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
 
 	// Spin until the manager is ready.
 	while (!Owner->Ready.load(/*std::memory_order_seq_cst*/)) [[unlikely]]  // #TODO: Memory order.
 	{
-		// TEMP
-		std::this_thread::sleep_for(std::chrono::milliseconds{100});
-		//std::this_thread::yield();
+		std::this_thread::yield();
 	}
-
-	JOBS_LOG(LogLevel::Log, "Worker Entry, Finished Spin");
 
 	// ThisFiber allows us to schedule other fibers.
 	auto& Representation = Owner->Workers[Owner->GetThisThreadID()];
@@ -36,12 +30,17 @@ void ManagerWorkerEntry(Manager* const Owner)
 		// #TODO: If we failed to get a new fiber, allocate more.
 	}
 
+	Representation.FiberIndex = NextFiberIndex;
+
 	JOBS_LOG(LogLevel::Log, "Worker acquired fiber.");
 
 	// Schedule the fiber, which executes the work. We will resume here when the manager is shutting down.
 	Owner->Fibers[NextFiberIndex].Schedule(Owner->Workers[Owner->GetThisThreadID()].GetThreadFiber());
 
 	JOBS_LOG(LogLevel::Log, "Worker Shutdown | ID: %i", Representation.GetID());
+
+	// Kill ourselves.
+	delete &Representation.GetThreadFiber();
 }
 
 struct FiberData
@@ -69,12 +68,13 @@ void ManagerFiberEntry(void* Data)
 
 			// #TODO: Add a signal system.
 
-			std::this_thread::sleep_for(std::chrono::milliseconds{1000});
+			std::this_thread::sleep_for(std::chrono::milliseconds{ 1000 });
 		}
 	}
 
 	// End of fiber lifetime, we are switching out to the worker thread to perform any final cleanup. We cannot be scheduled again beyond this point.
 	auto& ActiveWorker{ FData->Owner->Workers[FData->Owner->GetThisThreadID()] };
+
 	ActiveWorker.GetThreadFiber().Schedule(FData->Owner->Fibers[ActiveWorker.FiberIndex]);
 
 	JOBS_ASSERT(false, "Dead fiber was rescheduled.");
@@ -84,12 +84,15 @@ Manager::Manager() {}
 
 Manager::~Manager()
 {
-	// #TODO: Signal exit.
+	Shutdown.store(true);  // #TODO: Memory order.
 
+	// Wait for all of the workers to die before deleting the fiber data.
 	for (auto& Worker : Workers)
 	{
 		Worker.GetHandle().join();
 	}
+
+	JOBS_LOG(LogLevel::Log, "Deleting Fiber Data.");
 
 	delete Data;
 }
@@ -117,6 +120,7 @@ void Manager::Initialize(std::size_t ThreadCount)
 		Workers.push_back(std::move(Worker{ this, Iter, &ManagerWorkerEntry }));
 	}
 
+	Shutdown.store(false);  // #TODO: Memory order.
 	Ready.store(true, std::memory_order_seq_cst);  // #TODO: Memory order.
 }
 
@@ -174,9 +178,7 @@ bool Manager::IsValidID(std::size_t ID) const
 
 bool Manager::CanContinue() const
 {
-	// #TODO: Implement exit signaling through atomic flag.
-
-	return true;
+	return !Shutdown.load();  // #TODO: Memory order.
 }
 
 std::size_t Manager::GetAvailableFiber()

@@ -34,6 +34,7 @@ private:
 	CriticalSection FiberPoolLock;
 
 	std::atomic_bool Ready;
+	std::atomic_bool Shutdown;
 
 public:
 	Manager();

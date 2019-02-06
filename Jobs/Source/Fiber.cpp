@@ -99,10 +99,9 @@ void Fiber::Swap(Fiber& Other) noexcept
 	std::swap(Data, Other.Data);
 }
 
-// #TODO: Don't use a shared_ptr here, as we found out bad things happen.
-std::shared_ptr<Fiber> Fiber::FromThisThread(void* Arg)
+Fiber* Fiber::FromThisThread(void* Arg)
 {
-	auto Result{ std::make_shared<Fiber>(Arg) };
+	auto* Result{ new Fiber{Arg} };
 
 #if PLATFORM_WINDOWS
 	Result->Context = ConvertThreadToFiber(Arg);

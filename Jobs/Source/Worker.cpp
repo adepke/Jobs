@@ -20,7 +20,7 @@
 #define PLATFORM_POSIX 0
 #endif
 
-Worker::Worker(Manager* const InOwner, std::size_t InID, EntryType Entry) : Owner(*InOwner), ID(InID)
+Worker::Worker(Manager* const InOwner, std::size_t InID, EntryType Entry) : Owner(InOwner), ID(InID)
 {
 	JOBS_LOG(LogLevel::Log, "Building thread.");
 
@@ -28,9 +28,9 @@ Worker::Worker(Manager* const InOwner, std::size_t InID, EntryType Entry) : Owne
 
 	ThreadHandle = std::thread{ [this, Entry](auto Arg)
 	{
-		ThreadFiber = std::move(Fiber::FromThisThread(nullptr));
+		ThreadFiber = Fiber::FromThisThread(nullptr);
 
-		Entry(Arg);
+		Entry(Arg);  // We will never return here.
 	}, InOwner };
 
 #if PLATFORM_WINDOWS
@@ -47,9 +47,11 @@ Worker::Worker(Manager* const InOwner, std::size_t InID, EntryType Entry) : Owne
 
 	JOBS_ASSERT(pthread_setaffinity_np(ThreadHandle.native_handle(), sizeof(CPUSet), &CPUSet) == 0, "Error occurred in pthread_setaffinity_np().");
 #endif
+}
 
-	// TEMP: Patch for manager move()'ing the worker before the thread assumed ownership.
-	std::this_thread::sleep_for(std::chrono::milliseconds{ 50 });
+Worker::Worker(Worker&& Other) noexcept
+{
+	Swap(Other);
 }
 
 Worker::~Worker()
@@ -65,6 +67,17 @@ Worker::~Worker()
 	{
 		ThreadHandle.join();
 	}
+
+	// TEMP: We don't need this, as the worker kills itself.
+	// Delete the fiber after joining, as this will kill the thread.
+	//delete ThreadFiber;
+}
+
+Worker& Worker::operator=(Worker&& Other) noexcept
+{
+	Swap(Other);
+
+	return *this;
 }
 
 std::thread& Worker::GetHandle()
@@ -95,4 +108,13 @@ moodycamel::ConcurrentQueue<Job>& Worker::GetJobQueue()
 bool Worker::IsValidFiberIndex(std::size_t Index) const
 {
 	return Index != InvalidFiberIndex;
+}
+
+void Worker::Swap(Worker& Other) noexcept
+{
+	std::swap(Owner, Other.Owner);
+	std::swap(ThreadHandle, Other.ThreadHandle);
+	std::swap(ID, Other.ID);
+	std::swap(ThreadFiber, Other.ThreadFiber);
+	std::swap(JobQueue, Other.JobQueue);
 }
