@@ -11,7 +11,7 @@ void ManagerWorkerEntry(Manager* const Owner)
 	JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
 
 	// Spin until the manager is ready.
-	while (!Owner->Ready.load(/*std::memory_order_seq_cst*/)) [[unlikely]]  // #TODO: Memory order.
+	while (!Owner->Ready.load(std::memory_order_acquire)) [[unlikely]]
 	{
 		std::this_thread::yield();
 	}
@@ -79,7 +79,7 @@ Manager::Manager() {}
 
 Manager::~Manager()
 {
-	Shutdown.store(true);  // #TODO: Memory order.
+	Shutdown.store(true, std::memory_order_relaxed);
 
 	QueueCV.notify_all();  // Wake all sleepers, it's time to shutdown.
 
@@ -117,8 +117,8 @@ void Manager::Initialize(std::size_t ThreadCount)
 		Workers.push_back(std::move(Worker{ this, Iter, &ManagerWorkerEntry }));
 	}
 
-	Shutdown.store(false);  // #TODO: Memory order.
-	Ready.store(true, std::memory_order_seq_cst);  // #TODO: Memory order.
+	Shutdown.store(false, std::memory_order_relaxed);  // This must be set before we are ready.
+	Ready.store(true, std::memory_order_release);  // This must be set last.
 }
 
 std::optional<Job> Manager::Dequeue()
@@ -133,13 +133,10 @@ std::optional<Job> Manager::Dequeue()
 
 	else
 	{
-		// TEMP
-		std::this_thread::sleep_for(std::chrono::milliseconds{ 200 });
-
 		// Our queue is empty, time to steal.
 		// #TODO: Implement a smart stealing algorithm.
 
-		for (auto Iter = 0; Iter < Workers.size(); ++Iter)
+		for (auto Iter = 1; Iter < Workers.size(); ++Iter)
 		{
 			if (Workers[(Iter + ThisThreadID) % Workers.size()].GetJobQueue().try_dequeue(Result))
 			{
@@ -173,7 +170,7 @@ bool Manager::IsValidID(std::size_t ID) const
 
 bool Manager::CanContinue() const
 {
-	return !Shutdown.load();  // #TODO: Memory order.
+	return !Shutdown.load(std::memory_order_acquire);
 }
 
 std::size_t Manager::GetAvailableFiber()
@@ -186,7 +183,7 @@ std::size_t Manager::GetAvailableFiber()
 	{
 		if (!Fibers[Index].Launched.load(std::memory_order_acquire))
 		{
-			Fibers[Index].Launched.store(true, std::memory_order_seq_cst);  // #TODO: Memory order.
+			Fibers[Index].Launched.store(true, std::memory_order_release);  // Store before the spinlock ends.
 
 			FiberPoolLock.Unlock();
 

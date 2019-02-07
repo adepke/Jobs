@@ -6,7 +6,7 @@
 
 void Spinlock::Lock()
 {
-	while (Status.test_and_set(/*std::memory_order_acquire*/)) [[unlikely]]  // #TODO: Memory order.
+	while (Status.test_and_set(std::memory_order_acquire)) [[unlikely]]
 	{
 		std::this_thread::yield();
 	}
@@ -14,10 +14,10 @@ void Spinlock::Lock()
 
 bool Spinlock::TryLock()
 {
-	return !Status.test_and_set(/*std::memory_order_acquire*/);  // #TODO: Memory order.
+	return !Status.test_and_set(std::memory_order_acquire);
 }
 
 void Spinlock::Unlock()
 {
-	Status.clear(/*std::memory_order_release*/);  // #TODO: Memory order.
+	Status.clear(std::memory_order_release);
 }

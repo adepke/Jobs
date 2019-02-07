@@ -75,12 +75,12 @@ void Manager::Enqueue(U&& Job)
 
 	else
 	{
-		auto CachedEI{ EnqueueIndex.load() };  // #TODO: Memory order.
+		auto CachedEI{ EnqueueIndex.load(std::memory_order_acquire) };
 
 		// Note: We might lose an increment here if this runs in parallel, but we would rather suffer that instead of locking.
-		EnqueueIndex.store((CachedEI + 1) % Workers.size());
+		EnqueueIndex.store((CachedEI + 1) % Workers.size(), std::memory_order_release);
 
-		Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(Job));  // #TODO: Memory order.
+		Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(Job));
 	}
 
 	QueueCV.notify_one();  // Notify one sleeper. They will work steal if they don't get the job enqueued directly.
