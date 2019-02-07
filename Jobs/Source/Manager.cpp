@@ -4,6 +4,8 @@
 #include "../Include/Logging.h"
 #include "../Include/Fiber.h"
 
+#include <chrono>  // std::chrono
+
 void ManagerWorkerEntry(Manager* const Owner)
 {
 	JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
@@ -58,11 +60,10 @@ void ManagerFiberEntry(void* Data)
 
 		else
 		{
-			JOBS_LOG(LogLevel::Log, "No Job");
+			JOBS_LOG(LogLevel::Log, "Fiber sleeping.");
 
-			// #TODO: Add a signal system.
-
-			std::this_thread::sleep_for(std::chrono::milliseconds{ 1000 });
+			std::unique_lock Lock{ FData->Owner->QueueCVLock };
+			FData->Owner->QueueCV.wait(Lock);  // We will be woken up either by a shutdown event or if new work is available.
 		}
 	}
 
@@ -79,6 +80,8 @@ Manager::Manager() {}
 Manager::~Manager()
 {
 	Shutdown.store(true);  // #TODO: Memory order.
+
+	QueueCV.notify_all();  // Wake all sleepers, it's time to shutdown.
 
 	// Wait for all of the workers to die before deleting the fiber data.
 	for (auto& Worker : Workers)

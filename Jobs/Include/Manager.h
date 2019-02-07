@@ -7,8 +7,9 @@
 #include <vector>  // std::vector
 #include <thread>  // std::thread
 #include <optional>  // std::optional
-#include <utility>  // std::pair
 #include "CriticalSection.h"
+#include <condition_variable>  // std::condition_variable
+#include <mutex>  // std::mutex
 
 struct FiberData;
 
@@ -38,6 +39,9 @@ private:
 
 	// Used to cycle the worker thread to enqueue in.
 	std::atomic_uint EnqueueIndex;
+
+	std::condition_variable QueueCV;
+	std::mutex QueueCVLock;
 
 public:
 	Manager();
@@ -78,4 +82,6 @@ void Manager::Enqueue(U&& Job)
 
 		Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(Job));  // #TODO: Memory order.
 	}
+
+	QueueCV.notify_one();  // Notify one sleeper. They will work steal if they don't get the job enqueued directly.
 }
