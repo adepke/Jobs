@@ -35,7 +35,7 @@ void ManagerWorkerEntry(Manager* const Owner)
 
 	JOBS_LOG(LogLevel::Log, "Worker Shutdown | ID: %i", Representation.GetID());
 
-	// Kill ourselves.
+	// Kill ourselves. #TODO: This is a little dirty, we should fix this so that we perform the standard thread cleanup procedure and get a return code of 0.
 	delete &Representation.GetThreadFiber();
 }
 
@@ -79,7 +79,7 @@ Manager::Manager() {}
 
 Manager::~Manager()
 {
-	Shutdown.store(true, std::memory_order_relaxed);
+	Shutdown.store(true, std::memory_order_seq_cst);
 
 	QueueCV.notify_all();  // Wake all sleepers, it's time to shutdown.
 
