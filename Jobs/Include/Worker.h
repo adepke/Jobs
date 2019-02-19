@@ -2,6 +2,7 @@
 
 #include <cstddef>  // std::size_t
 #include <thread>  // std::thread
+#include <atomic>  // std::atomic
 #include "Job.h"
 #include "../ThirdParty/ConcurrentQueue/concurrentqueue.h"
 
@@ -13,6 +14,7 @@ class Worker
 	using EntryType = void(*)(Manager* const);
 
 private:
+	std::atomic_bool Ready;
 	Manager* Owner = nullptr;
 	std::thread ThreadHandle;
 	std::size_t ID;  // Manager-specific ID.
@@ -33,6 +35,7 @@ public:
 
 	std::size_t FiberIndex = InvalidFiberIndex;  // Index into the owner's fiber pool that we're executing. We need this for rescheduling the thread fiber.
 
+	bool IsReady() const;
 	std::thread& GetHandle();
 	std::thread::id GetNativeID() const;
 	std::size_t GetID() const;

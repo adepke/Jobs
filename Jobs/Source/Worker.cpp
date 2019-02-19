@@ -30,6 +30,8 @@ Worker::Worker(Manager* const InOwner, std::size_t InID, EntryType Entry) : Owne
 	{
 		ThreadFiber = Fiber::FromThisThread(nullptr);
 
+		Ready.store(true, std::memory_order_seq_cst);  // We saved the thread fiber pointer, the worker can now move us.
+
 		Entry(Arg);  // We will never return here.
 	}, InOwner };
 
@@ -74,6 +76,11 @@ Worker& Worker::operator=(Worker&& Other) noexcept
 	Swap(Other);
 
 	return *this;
+}
+
+bool Worker::IsReady() const
+{
+	return Ready.load(std::memory_order_acquire);
 }
 
 std::thread& Worker::GetHandle()

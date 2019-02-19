@@ -114,7 +114,16 @@ void Manager::Initialize(std::size_t ThreadCount)
 	
 	for (std::size_t Iter = 0; Iter < ThreadCount; ++Iter)
 	{
-		Workers.push_back(std::move(Worker{ this, Iter, &ManagerWorkerEntry }));
+		Worker NewWorker{ this, Iter, &ManagerWorkerEntry };
+
+		// Fix for a rare data race when the swap occurs while the worker is saving the fiber pointer.
+		while (!NewWorker.IsReady()) [[unlikely]]
+		{
+			// Should almost never end up spinning here.
+			std::this_thread::yield();
+		}
+
+		Workers.push_back(std::move(NewWorker));
 	}
 
 	Shutdown.store(false, std::memory_order_relaxed);  // This must be set before we are ready.

@@ -27,7 +27,7 @@ private:
 	std::vector<Fiber> Fibers;  // Pool of fibers, they may or may not be available.
 	std::vector<Fiber> WaitingFibers;  // #TODO: Pool of fibers that are waiting for some dependency. Separated from the main pool for cache effectiveness.
 
-	static constexpr std::size_t FiberCount = 16;
+	static constexpr std::size_t FiberCount = 64;
 	static constexpr std::size_t FiberStackSize = 1024 * 1024;  // 1 MB
 
 	static constexpr std::size_t InvalidID = std::numeric_limits<std::size_t>::max();
