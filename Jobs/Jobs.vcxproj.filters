@@ -45,6 +45,9 @@
     <ClInclude Include="Include\CriticalSection.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Counter.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Logging.cpp">

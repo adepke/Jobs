@@ -3,6 +3,7 @@
 #include "../Include/Assert.h"
 #include "../Include/Logging.h"
 #include "../Include/Fiber.h"
+#include "../Include/Counter.h"
 
 #include <chrono>  // std::chrono
 
@@ -39,6 +40,7 @@ void ManagerWorkerEntry(Manager* const Owner)
 	delete &Representation.GetThreadFiber();
 }
 
+// Shared common data.
 struct FiberData
 {
 	Manager* const Owner;
@@ -56,6 +58,12 @@ void ManagerFiberEntry(void* Data)
 		if (Job)
 		{
 			Job->Entry(Job->Data);
+
+			// Finished, notify the counter if we have one.
+			if (Job->AtomicCounter)
+			{
+				Job->AtomicCounter->Decrement();
+			}
 		}
 
 		else

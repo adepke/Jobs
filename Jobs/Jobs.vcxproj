@@ -122,6 +122,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Include\Assert.h" />
+    <ClInclude Include="Include\Counter.h" />
     <ClInclude Include="Include\CriticalSection.h" />
     <ClInclude Include="Include\Fiber.h" />
     <ClInclude Include="Include\Job.h" />
