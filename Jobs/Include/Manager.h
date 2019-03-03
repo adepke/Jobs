@@ -10,6 +10,9 @@
 #include "CriticalSection.h"
 #include <condition_variable>  // std::condition_variable
 #include <mutex>  // std::mutex
+#include <string_view>  // std::string_view
+#include <memory>  // std::shared_ptr
+#include "Counter.h"
 
 struct FiberData;
 
@@ -44,13 +47,16 @@ private:
 	std::mutex QueueCVLock;
 
 public:
-	Manager();
+	Manager() = default;
 	~Manager();
 
 	void Initialize(std::size_t ThreadCount = 0);
 
 	template <typename U>
 	void Enqueue(U&& Job);
+
+	template <typename U>
+	std::shared_ptr<Counter<>> Enqueue(U&& Job, std::string_view Group);
 
 private:
 	std::optional<Job> Dequeue();
@@ -84,4 +90,15 @@ void Manager::Enqueue(U&& Job)
 	}
 
 	QueueCV.notify_one();  // Notify one sleeper. They will work steal if they don't get the job enqueued directly.
+}
+
+template <typename U>
+std::shared_ptr<Counter<>> Manager::Enqueue(U&& Job, std::string_view Group)
+{
+	// #TODO: Search for an existing counter with this group name, otherwise allocate a new one.
+	auto GroupCounter{ std::make_shared<Counter<unsigned int>>(1) };
+	Job.AtomicCounter = GroupCounter;
+	Enqueue(Job);
+
+	return GroupCounter;
 }

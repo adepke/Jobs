@@ -60,9 +60,9 @@ void ManagerFiberEntry(void* Data)
 			Job->Entry(Job->Data);
 
 			// Finished, notify the counter if we have one.
-			if (Job->AtomicCounter)
+			if (auto StrongCounter{ Job->AtomicCounter.lock() })
 			{
-				Job->AtomicCounter->Decrement();
+				StrongCounter->Decrement();
 			}
 		}
 
@@ -82,8 +82,6 @@ void ManagerFiberEntry(void* Data)
 
 	JOBS_ASSERT(false, "Dead fiber was rescheduled.");
 }
-
-Manager::Manager() {}
 
 Manager::~Manager()
 {
@@ -106,6 +104,7 @@ void Manager::Initialize(std::size_t ThreadCount)
 {
 	JOBS_ASSERT(ThreadCount <= std::thread::hardware_concurrency(), "Job manager thread count should not exceed hardware concurrency.");
 
+	// #TODO: Unique Ptr.
 	Data = new FiberData{ this };
 
 	for (auto Iter = 0; Iter < FiberCount; ++Iter)
@@ -125,7 +124,7 @@ void Manager::Initialize(std::size_t ThreadCount)
 		Worker NewWorker{ this, Iter, &ManagerWorkerEntry };
 
 		// Fix for a rare data race when the swap occurs while the worker is saving the fiber pointer.
-		while (!NewWorker.IsReady()) [[unlikely]]
+		while (!NewWorker.IsReady())[[unlikely]]
 		{
 			// Should almost never end up spinning here.
 			std::this_thread::yield();

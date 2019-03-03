@@ -69,5 +69,6 @@
     <ClCompile Include="Source\CriticalSection.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Testing2.cpp" />
   </ItemGroup>
 </Project>
