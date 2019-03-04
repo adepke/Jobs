@@ -22,7 +22,8 @@ public:
 	Counter& operator=(const Counter&) = delete;
 	Counter& operator=(Counter&&) noexcept = delete;
 
-	void Decrement();
+	Counter& operator++();
+	Counter& operator--();
 
 	// Blocking operation.
 	void Wait(T ExpectedValue);
@@ -44,12 +45,24 @@ Counter<T>::Counter(Counter&& Other) noexcept
 }
 
 template <typename T>
-void Counter<T>::Decrement()
+Counter<T>& Counter<T>::operator++()
+{
+	++Internal;
+
+	// Don't notify.
+
+	return *this;
+}
+
+template <typename T>
+Counter<T>& Counter<T>::operator--()
 {
 	--Internal;
 
 	std::lock_guard LocalLock{ Lock };
 	WaitCV.notify_all();
+
+	return *this;
 }
 
 template <typename T>

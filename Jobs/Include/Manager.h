@@ -10,9 +10,10 @@
 #include "CriticalSection.h"
 #include <condition_variable>  // std::condition_variable
 #include <mutex>  // std::mutex
-#include <string_view>  // std::string_view
+#include <string>  // std::string
 #include <memory>  // std::shared_ptr
 #include "Counter.h"
+#include <map>  // std::map
 
 struct FiberData;
 
@@ -46,6 +47,8 @@ private:
 	std::condition_variable QueueCV;
 	std::mutex QueueCVLock;
 
+	std::map<std::string, std::shared_ptr<Counter<>>> GroupMap;
+
 public:
 	Manager() = default;
 	~Manager();
@@ -56,7 +59,7 @@ public:
 	void Enqueue(U&& Job);
 
 	template <typename U>
-	std::shared_ptr<Counter<>> Enqueue(U&& Job, std::string_view Group);
+	std::shared_ptr<Counter<>> Enqueue(U&& Job, const std::string& Group);
 
 private:
 	std::optional<Job> Dequeue();
@@ -93,10 +96,33 @@ void Manager::Enqueue(U&& Job)
 }
 
 template <typename U>
-std::shared_ptr<Counter<>> Manager::Enqueue(U&& Job, std::string_view Group)
+std::shared_ptr<Counter<>> Manager::Enqueue(U&& Job, const std::string& Group)
 {
-	// #TODO: Search for an existing counter with this group name, otherwise allocate a new one.
-	auto GroupCounter{ std::make_shared<Counter<unsigned int>>(1) };
+	std::shared_ptr<Counter<>> GroupCounter;
+	auto AllocateCounter{ []() { return std::make_shared<Counter<>>(1); } };
+
+	if (Group.empty())
+	{
+		GroupCounter = std::move(AllocateCounter());
+	}
+
+	else
+	{
+		auto GroupIter{ GroupMap.find(Group) };
+
+		if (GroupIter != GroupMap.end())
+		{
+			GroupCounter = GroupIter->second;
+			GroupCounter->operator++();
+		}
+
+		else
+		{
+			GroupCounter = std::move(AllocateCounter());
+			GroupMap.insert({ Group, GroupCounter });
+		}
+	}
+
 	Job.AtomicCounter = GroupCounter;
 	Enqueue(Job);
 

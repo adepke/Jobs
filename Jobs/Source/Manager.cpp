@@ -62,10 +62,11 @@ void ManagerFiberEntry(void* Data)
 			// Finished, notify the counter if we have one.
 			if (auto StrongCounter{ Job->AtomicCounter.lock() })
 			{
-				StrongCounter->Decrement();
+				StrongCounter->operator--();
 			}
 		}
 
+		// #BUG: Going from dequeue fail to sleeping is not an atomic operation, so we potentially miss work enqueued in this period.
 		else
 		{
 			JOBS_LOG(LogLevel::Log, "Fiber sleeping.");
