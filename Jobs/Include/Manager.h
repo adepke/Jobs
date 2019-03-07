@@ -51,7 +51,12 @@ private:
 
 public:
 	Manager() = default;
+	Manager(const Manager&) = delete;
+	Manager(Manager&&) noexcept = delete;  // #TODO: Implement.
 	~Manager();
+
+	Manager& operator=(const Manager&) = delete;
+	Manager& operator=(Manager&&) = delete;  // #TODO: Implement.
 
 	void Initialize(std::size_t ThreadCount = 0);
 

@@ -57,6 +57,33 @@ void ManagerFiberEntry(void* Data)
 		auto Job{ std::move(FData->Owner->Dequeue()) };
 		if (Job)
 		{
+			// Loop until we satisfy all of our dependencies.
+			bool RequiresEvaluation = true;
+			while (RequiresEvaluation)
+			{
+				RequiresEvaluation = false;
+
+				for (const auto& Dependency : Job->Dependencies)
+				{
+					auto StrongDependency{ Dependency.first.lock() };
+					JOBS_LOG(LogLevel::Log, "Current: %d Required: %d", StrongDependency->Get(), Dependency.second);
+
+					if (auto StrongDependency{ Dependency.first.lock() }; !StrongDependency->WaitUserSpace(Dependency.second, std::chrono::milliseconds{ 800 }))
+					{
+						// This dependency timed out, move ourselves to the wait pool.
+						JOBS_LOG(LogLevel::Log, "Job dependencies timed out, moving to the wait pool.");
+
+						// #TODO: Move here.
+						//FData->Owner->WaitingFibers...;
+
+						// Resumed from the wait pool, re-evaluate the dependencies.
+						JOBS_LOG(LogLevel::Log, "Job resumed from wait pool, re-evaluating dependencies.");
+
+						RequiresEvaluation = true;
+					}
+				}
+			}
+
 			Job->Entry(Job->Data);
 
 			// Finished, notify the counter if we have one.
@@ -125,7 +152,7 @@ void Manager::Initialize(std::size_t ThreadCount)
 		Worker NewWorker{ this, Iter, &ManagerWorkerEntry };
 
 		// Fix for a rare data race when the swap occurs while the worker is saving the fiber pointer.
-		while (!NewWorker.IsReady())[[unlikely]]
+		while (!NewWorker.IsReady()) [[unlikely]]
 		{
 			// Should almost never end up spinning here.
 			std::this_thread::yield();
