@@ -5,8 +5,10 @@
 #include "Fiber.h"
 #include "Worker.h"
 #include <vector>  // std::vector
+#include <array>  // std::array
+#include <utility>  // std::move, std::pair
 #include <thread>  // std::thread
-#include <optional>  // std::optional
+#include <variant>  // std::variant
 #include "CriticalSection.h"
 #include <condition_variable>  // std::condition_variable
 #include <mutex>  // std::mutex
@@ -23,20 +25,19 @@ class Manager
 	friend void ManagerWorkerEntry(Manager* const Owner);
 	friend void ManagerFiberEntry(void* Data);
 
+	// #TODO: Move these into template traits.
+	static constexpr std::size_t FiberCount = 64;
+	static constexpr std::size_t FiberStackSize = 1024 * 1024;  // 1 MB
+
 private:
 	// Shared fiber storage.
 	FiberData* Data = nullptr;
 
 	std::vector<Worker> Workers;
-	std::vector<Fiber> Fibers;  // Pool of fibers, they may or may not be available.
-	std::vector<Fiber> WaitingFibers;  // #TODO: Pool of fibers that are waiting for some dependency. Separated from the main pool for cache effectiveness.
+	std::array<std::pair<Fiber, std::atomic_bool>, FiberCount> Fibers;  // Pool of fibers paired to an availability flag.
+	moodycamel::ConcurrentQueue<size_t> WaitingFibers;  // Queue of fiber indices that are waiting for some dependency or scheduled a waiting fiber.
 
-	static constexpr std::size_t FiberCount = 64;
-	static constexpr std::size_t FiberStackSize = 1024 * 1024;  // 1 MB
-
-	static constexpr std::size_t InvalidID = std::numeric_limits<std::size_t>::max();
-
-	CriticalSection FiberPoolLock;
+	static constexpr auto InvalidID = std::numeric_limits<size_t>::max();
 
 	std::atomic_bool Ready;
 	std::atomic_bool Shutdown;
@@ -67,13 +68,14 @@ public:
 	std::shared_ptr<Counter<>> Enqueue(U&& Job, const std::string& Group);
 
 private:
-	std::optional<Job> Dequeue();
+	std::variant<std::monostate, Job, size_t> Dequeue();  // Returns a job, a waiting fiber index, or nothing.
 
 	std::size_t GetThisThreadID() const;
 	bool IsValidID(std::size_t ID) const;
 
 	bool CanContinue() const;
 
+	// Returns a fiber that is not currently scheduled.
 	std::size_t GetAvailableFiber();
 };
 

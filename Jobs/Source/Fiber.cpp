@@ -25,8 +25,6 @@ void FiberEntry(void* Data)
 	JOBS_LOG(LogLevel::Log, "Fiber entry.");
 }
 
-Fiber::Fiber(void* Arg) : Data(Arg) {}
-
 Fiber::Fiber(std::size_t StackSize, decltype(&FiberEntry) Entry, void* Arg) : Data(Arg)
 {
 	JOBS_LOG(LogLevel::Log, "Building fiber.");
@@ -101,7 +99,7 @@ void Fiber::Swap(Fiber& Other) noexcept
 
 Fiber* Fiber::FromThisThread(void* Arg)
 {
-	auto* Result{ new Fiber{Arg} };
+	auto* Result{ new Fiber{} };
 
 #if PLATFORM_WINDOWS
 	Result->Context = ConvertThreadToFiber(Arg);
