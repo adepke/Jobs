@@ -13,11 +13,17 @@
 #include <condition_variable>  // std::condition_variable
 #include <mutex>  // std::mutex
 #include <string>  // std::string
-#include <memory>  // std::shared_ptr
+#include <memory>  // std::shared_ptr, std::unique_ptr
 #include "Counter.h"
 #include <map>  // std::map
 
-struct FiberData;
+// Shared common data.
+struct FiberData
+{
+	Manager* const Owner;
+
+	FiberData(Manager* const InOwner) : Owner(InOwner) {};
+};
 
 class Manager
 {
@@ -31,7 +37,7 @@ class Manager
 
 private:
 	// Shared fiber storage.
-	FiberData* Data = nullptr;
+	std::unique_ptr<FiberData> Data;
 
 	std::vector<Worker> Workers;
 	std::array<std::pair<Fiber, std::atomic_bool>, FiberCount> Fibers;  // Pool of fibers paired to an availability flag.

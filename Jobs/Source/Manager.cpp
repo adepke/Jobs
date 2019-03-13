@@ -35,12 +35,6 @@ void ManagerWorkerEntry(Manager* const Owner)
 	delete &Representation.GetThreadFiber();
 }
 
-// Shared common data.
-struct FiberData
-{
-	Manager* const Owner;
-};
-
 void ManagerFiberEntry(void* Data)
 {
 	JOBS_ASSERT(Data, "Manager fiber entry missing data.");
@@ -54,8 +48,6 @@ void ManagerFiberEntry(void* Data)
 		const auto PreviousFiberIndex{ ThisFiber.first.PreviousFiberIndex };
 		if (FData->Owner->IsValidID(PreviousFiberIndex))
 		{
-			JOBS_LOG(LogLevel::Log, "Fiber cleaning up old fiber: %d, From: %d, Enqueue: %d", PreviousFiberIndex, FData->Owner->Workers[FData->Owner->GetThisThreadID()].FiberIndex, FData->Owner->Fibers[PreviousFiberIndex].first.NeedsWaitEnqueue);
-
 			ThisFiber.first.PreviousFiberIndex = Manager::InvalidID;  // Reset.
 			auto& PreviousFiber{ FData->Owner->Fibers[PreviousFiberIndex] };
 
@@ -160,22 +152,17 @@ Manager::~Manager()
 	{
 		Worker.GetHandle().join();
 	}
-
-	JOBS_LOG(LogLevel::Log, "Manager deleting fiber data.");
-
-	delete Data;
 }
 
 void Manager::Initialize(std::size_t ThreadCount)
 {
 	JOBS_ASSERT(ThreadCount <= std::thread::hardware_concurrency(), "Job manager thread count should not exceed hardware concurrency.");
 
-	// #TODO: Unique Ptr.
-	Data = new FiberData{ this };
+	Data = std::move(std::make_unique<FiberData>(this));
 
 	for (auto Iter = 0; Iter < FiberCount; ++Iter)
 	{
-		Fibers[Iter].first = std::move(Fiber{ FiberStackSize, &ManagerFiberEntry, Data });
+		Fibers[Iter].first = std::move(Fiber{ FiberStackSize, &ManagerFiberEntry, Data.get() });
 		Fibers[Iter].second.store(true);  // #TODO: Memory order.
 	}
 
