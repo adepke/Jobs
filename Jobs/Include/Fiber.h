@@ -13,11 +13,12 @@ private:
 	void* Data = nullptr;
 
 public:
-	// If we're a fresh fiber or not.
-	std::atomic_bool Launched = false;
+	bool WaitPoolPriority = false;  // Used for alternating wait pool. Does not need to be atomic.
+	size_t PreviousFiberIndex = std::numeric_limits<size_t>::max();  // Used to track the fiber that scheduled us.
+	bool NeedsWaitEnqueue = false;  // Used to mark if we need to have availability restored or added to the wait pool.
 
 public:
-	Fiber(void* Arg);  // Used for converting a thread to a fiber.
+	Fiber() = default;  // Used for converting a thread to a fiber.
 	Fiber(std::size_t StackSize, decltype(&FiberEntry) Entry, void* Arg);
 	Fiber(const Fiber&) = delete;
 	Fiber(Fiber&& Other) noexcept;

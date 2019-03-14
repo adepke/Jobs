@@ -45,6 +45,12 @@
     <ClInclude Include="Include\CriticalSection.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Counter.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Futex.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Logging.cpp">
@@ -64,6 +70,10 @@
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\CriticalSection.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Testing2.cpp" />
+    <ClCompile Include="Source\Futex.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
