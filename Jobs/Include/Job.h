@@ -1,8 +1,8 @@
 #pragma once
 
-#include <memory>  // std::weak_ptr
+#include <memory>  // std::shared_ptr, std::weak_ptr
 #include <vector>  // std::vector
-#include <utility>  // std::pair, std::move
+#include <utility>  // std::pair
 #include "Counter.h"
 
 class Job
