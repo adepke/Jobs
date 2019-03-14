@@ -15,7 +15,7 @@ public:
 	EntryType Entry;
 
 	Job() = default;
-	Job(EntryType InEntry) : Entry(InEntry) {}
+	Job(EntryType InEntry, void* InData = nullptr) : Entry(InEntry), Data(InData) {}
 
 	void AddDependency(const std::shared_ptr<Counter<>>& Handle, const Counter<>::Type ExpectedValue)
 	{
