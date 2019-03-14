@@ -10,6 +10,13 @@ class Job
 	friend class Manager;
 	friend void ManagerFiberEntry(void* Data);
 
+private:
+	void* Data = nullptr;
+	std::weak_ptr<Counter<>> AtomicCounter;
+
+	// List of dependencies this job needs before executing. Pairs of counters to expected values.
+	std::vector<std::pair<std::weak_ptr<Counter<>>, Counter<>::Type>> Dependencies;
+
 public:
 	using EntryType = void(*)(void* Data);
 	EntryType Entry;
@@ -21,11 +28,4 @@ public:
 	{
 		Dependencies.push_back({ Handle, ExpectedValue });
 	}
-
-private:
-	void* Data = nullptr;
-	std::weak_ptr<Counter<>> AtomicCounter;
-
-	// List of dependencies this job needs before executing. Pairs of counters to expected values.
-	std::vector<std::pair<std::weak_ptr<Counter<>>, Counter<>::Type>> Dependencies;
 };
