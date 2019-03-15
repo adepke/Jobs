@@ -101,7 +101,7 @@ void ManagerFiberEntry(void* Data)
 				}
 			}
 
-			JobResult->Entry(JobResult->Data);
+			(*JobResult)();
 
 			// Finished, notify the counter if we have one.
 			if (auto StrongCounter{ JobResult->AtomicCounter.lock() })

@@ -4,6 +4,7 @@
 #include <vector>  // std::vector
 #include <utility>  // std::pair
 #include "Counter.h"
+#include "Assert.h"
 
 class Job
 {
@@ -11,6 +12,9 @@ class Job
 	friend void ManagerFiberEntry(void* Data);
 
 private:
+	using EntryType = void(*)(void* Data);
+	EntryType Entry = nullptr;
+
 	void* Data = nullptr;
 	std::weak_ptr<Counter<>> AtomicCounter;
 
@@ -18,14 +22,18 @@ private:
 	std::vector<std::pair<std::weak_ptr<Counter<>>, Counter<>::Type>> Dependencies;
 
 public:
-	using EntryType = void(*)(void* Data);
-	EntryType Entry;
-
 	Job() = default;
 	Job(EntryType InEntry, void* InData = nullptr) : Entry(InEntry), Data(InData) {}
 
 	void AddDependency(const std::shared_ptr<Counter<>>& Handle, const Counter<>::Type ExpectedValue)
 	{
 		Dependencies.push_back({ Handle, ExpectedValue });
+	}
+
+	void operator()()
+	{
+		JOBS_ASSERT(Entry, "Attempted to execute empty job.");
+
+		return Entry(Data);
 	}
 };
