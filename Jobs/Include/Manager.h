@@ -16,6 +16,7 @@
 #include <memory>  // std::shared_ptr, std::unique_ptr
 #include "Counter.h"
 #include <map>  // std::map
+#include <type_traits>  // std::is_same, std::decay
 
 // Shared common data.
 struct FiberData
@@ -86,13 +87,15 @@ private:
 };
 
 template <typename U>
-void Manager::Enqueue(U&& Job)
+void Manager::Enqueue(U&& InJob)
 {
+	static_assert(std::is_same_v<std::decay_t<U>, Job>, "Enqueue only supports objects of type Job");
+
 	auto ThisThreadID{ GetThisThreadID() };
 
 	if (IsValidID(ThisThreadID))
 	{
-		Workers[ThisThreadID].GetJobQueue().enqueue(std::forward<U>(Job));
+		Workers[ThisThreadID].GetJobQueue().enqueue(std::forward<U>(InJob));
 	}
 
 	else
@@ -102,15 +105,17 @@ void Manager::Enqueue(U&& Job)
 		// Note: We might lose an increment here if this runs in parallel, but we would rather suffer that instead of locking.
 		EnqueueIndex.store((CachedEI + 1) % Workers.size(), std::memory_order_release);
 
-		Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(Job));
+		Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(InJob));
 	}
 
 	QueueCV.notify_one();  // Notify one sleeper. They will work steal if they don't get the job enqueued directly.
 }
 
 template <typename U>
-std::shared_ptr<Counter<>> Manager::Enqueue(U&& Job, const std::string& Group)
+std::shared_ptr<Counter<>> Manager::Enqueue(U&& InJob, const std::string& Group)
 {
+	static_assert(std::is_same_v<std::decay_t<U>, Job>, "Enqueue only supports objects of type Job");
+
 	std::shared_ptr<Counter<>> GroupCounter;
 	auto AllocateCounter{ []() { return std::make_shared<Counter<>>(1); } };
 
@@ -136,8 +141,8 @@ std::shared_ptr<Counter<>> Manager::Enqueue(U&& Job, const std::string& Group)
 		}
 	}
 
-	Job.AtomicCounter = GroupCounter;
-	Enqueue(Job);
+	InJob.AtomicCounter = GroupCounter;
+	Enqueue(InJob);
 
 	return GroupCounter;
 }
