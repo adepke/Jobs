@@ -129,6 +129,13 @@ void ManagerFiberEntry(void* Data)
 			JOBS_LOG(LogLevel::Log, "Fiber sleeping.");
 
 			std::unique_lock Lock{ FData->Owner->QueueCVLock };
+
+			// Test the shutdown condition once more under lock, as it could've been set during the transitional period.
+			if (!FData->Owner->CanContinue())
+			{
+				break;
+			}
+
 			FData->Owner->QueueCV.wait(Lock);  // We will be woken up either by a shutdown event or if new work is available.
 		}
 	}
@@ -143,9 +150,11 @@ void ManagerFiberEntry(void* Data)
 
 Manager::~Manager()
 {
+	std::unique_lock Lock{ QueueCVLock };  // This is used to make sure we don't let any fibers slip by and not catch the shutdown notify, which causes a deadlock.
 	Shutdown.store(true, std::memory_order_seq_cst);
 
 	QueueCV.notify_all();  // Wake all sleepers, it's time to shutdown.
+	Lock.unlock();
 
 	// Wait for all of the workers to die before deleting the fiber data.
 	for (auto& Worker : Workers)
