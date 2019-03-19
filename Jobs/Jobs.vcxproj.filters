@@ -51,6 +51,9 @@
     <ClInclude Include="Include\Futex.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Kernel.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Logging.cpp">

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Kernel.h"
 #include <memory>  // std::shared_ptr, std::weak_ptr
 #include <vector>  // std::vector
 #include <utility>  // std::pair
@@ -12,8 +13,7 @@ class Job
 	friend void ManagerFiberEntry(void* Data);
 
 private:
-	using EntryType = void(*)(void* Data);
-	EntryType Entry = nullptr;
+	Kernel<void(void*)> Kern;
 
 	void* Data = nullptr;
 	std::weak_ptr<Counter<>> AtomicCounter;
@@ -23,7 +23,7 @@ private:
 
 public:
 	Job() = default;
-	Job(EntryType InEntry, void* InData = nullptr) : Entry(InEntry), Data(InData) {}
+	Job(decltype(Kern) InKernel, void* InData = nullptr) : Kern(std::move(InKernel)), Data(InData) {}
 
 	void AddDependency(const std::shared_ptr<Counter<>>& Handle, const Counter<>::Type ExpectedValue)
 	{
@@ -32,8 +32,6 @@ public:
 
 	void operator()()
 	{
-		JOBS_ASSERT(Entry, "Attempted to execute empty job.");
-
-		return Entry(Data);
+		return Kern(Data);
 	}
 };
