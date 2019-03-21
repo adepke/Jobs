@@ -15,40 +15,40 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Include\Logging.h">
-      <Filter>Include</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\Assert.h">
-      <Filter>Include</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\Fiber.h">
-      <Filter>Include</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\Spinlock.h">
-      <Filter>Include</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\Job.h">
-      <Filter>Include</Filter>
-    </ClInclude>
     <ClInclude Include="ThirdParty\ConcurrentQueue\concurrentqueue.h">
       <Filter>ThirdParty\ConcurrentQueue</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Manager.h">
+    <ClInclude Include="Include\Jobs\Assert.h">
       <Filter>Include</Filter>
     </ClInclude>
-    <ClInclude Include="Include\WindowsMinimal.h">
+    <ClInclude Include="Include\Jobs\Counter.h">
       <Filter>Include</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Worker.h">
+    <ClInclude Include="Include\Jobs\CriticalSection.h">
       <Filter>Include</Filter>
     </ClInclude>
-    <ClInclude Include="Include\CriticalSection.h">
+    <ClInclude Include="Include\Jobs\Fiber.h">
       <Filter>Include</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Counter.h">
+    <ClInclude Include="Include\Jobs\Futex.h">
       <Filter>Include</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Futex.h">
+    <ClInclude Include="Include\Jobs\Job.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Jobs\Logging.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Jobs\Manager.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Jobs\Spinlock.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Jobs\WindowsMinimal.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Jobs\Worker.h">
       <Filter>Include</Filter>
     </ClInclude>
   </ItemGroup>
@@ -56,7 +56,6 @@
     <ClCompile Include="Source\Logging.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Testing.cpp" />
     <ClCompile Include="Source\Fiber.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -72,7 +71,6 @@
     <ClCompile Include="Source\CriticalSection.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Testing2.cpp" />
     <ClCompile Include="Source\Futex.cpp">
       <Filter>Source</Filter>
     </ClCompile>

@@ -1,8 +1,8 @@
-#include "../Include/Futex.h"
+#include <Jobs/Futex.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #define PLATFORM_WINDOWS 1
-#include "../Include/WindowsMinimal.h"
+#include <Jobs/WindowsMinimal.h>
 #else
 #define PLATFORM_POSIX 1
 #include <linux/futex.h>
@@ -16,38 +16,41 @@
 #define PLATFORM_POSIX 0
 #endif
 
-bool Futex::Wait(void* CompareAddress, size_t Size, uint64_t TimeoutNs) const
+namespace Jobs
 {
-#if PLATFORM_WINDOWS
-	return WaitOnAddress(Address, CompareAddress, Size, TimeoutNs > 0 ? (TimeoutNs >= 1e6 ? TimeoutNs : 1e6) / 1e6 : INFINITE);
-#else
-	timespec Timeout;
-	Timeout.tv_sec = static_cast<int>(Timeout / 1e9);  // Whole seconds.
-	Timeout.tv_nsec = static_cast<long>(TimeoutNs % 1e9);  // Remaining nano seconds.
-
-	futex(CompareAddress, FUTEX_WAIT, , TimeoutNs > 0 ? &Timeout : nullptr, , );
-	sys_futex()?
-#endif
-}
-
-void Futex::NotifyOne() const
-{
-	if (Address)
+	bool Futex::Wait(void* CompareAddress, size_t Size, uint64_t TimeoutNs) const
 	{
 #if PLATFORM_WINDOWS
-		WakeByAddressSingle(Address);
+		return WaitOnAddress(Address, CompareAddress, Size, TimeoutNs > 0 ? (TimeoutNs >= 1e6 ? TimeoutNs : 1e6) / 1e6 : INFINITE);
 #else
+		timespec Timeout;
+		Timeout.tv_sec = static_cast<int>(Timeout / 1e9);  // Whole seconds.
+		Timeout.tv_nsec = static_cast<long>(TimeoutNs % 1e9);  // Remaining nano seconds.
+
+		futex(CompareAddress, FUTEX_WAIT, , TimeoutNs > 0 ? &Timeout : nullptr, , );
+		sys_futex() ?
 #endif
 	}
-}
 
-void Futex::NotifyAll() const
-{
-	if (Address)
+	void Futex::NotifyOne() const
 	{
+		if (Address)
+		{
 #if PLATFORM_WINDOWS
-		WakeByAddressAll(Address);
+			WakeByAddressSingle(Address);
 #else
 #endif
+		}
+	}
+
+	void Futex::NotifyAll() const
+	{
+		if (Address)
+		{
+#if PLATFORM_WINDOWS
+			WakeByAddressAll(Address);
+#else
+#endif
+		}
 	}
 }

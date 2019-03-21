@@ -1,13 +1,13 @@
-#include "../Include/Worker.h"
+#include <Jobs/Worker.h>
 
-#include "../Include/Manager.h"
-#include "../Include/Logging.h"
-#include "../Include/Assert.h"
-#include "../Include/Fiber.h"
+#include <Jobs/Manager.h>
+#include <Jobs/Logging.h>
+#include <Jobs/Assert.h>
+#include <Jobs/Fiber.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #define PLATFORM_WINDOWS 1
-#include "../Include/WindowsMinimal.h"
+#include <Jobs/WindowsMinimal.h>
 #else
 #define PLATFORM_POSIX 1
 #include <pthread.h>
@@ -20,104 +20,107 @@
 #define PLATFORM_POSIX 0
 #endif
 
-Worker::Worker(Manager* const InOwner, std::size_t InID, EntryType Entry) : Owner(InOwner), ID(InID)
+namespace Jobs
 {
-	JOBS_LOG(LogLevel::Log, "Building thread.");
-
-	JOBS_ASSERT(InOwner, "Worker constructor needs a valid owner.");
-
-	ThreadHandle = std::thread{ [this, Entry](auto Arg)
+	Worker::Worker(Manager* const InOwner, size_t InID, EntryType Entry) : Owner(InOwner), ID(InID)
 	{
-		ThreadFiber = Fiber::FromThisThread(nullptr);
+		JOBS_LOG(LogLevel::Log, "Building thread.");
 
-		Ready.store(true, std::memory_order_seq_cst);  // We saved the thread fiber pointer, the worker can now move us.
+		JOBS_ASSERT(InOwner, "Worker constructor needs a valid owner.");
 
-		Entry(Arg);  // We will never return here.
-	}, InOwner };
+		ThreadHandle = std::thread{ [this, Entry](auto Arg)
+		{
+			ThreadFiber = Fiber::FromThisThread(nullptr);
+
+			Ready.store(true, std::memory_order_seq_cst);  // We saved the thread fiber pointer, the worker can now move us.
+
+			Entry(Arg);  // We will never return here.
+		}, InOwner };
 
 #if PLATFORM_WINDOWS
-	SetThreadAffinityMask(ThreadHandle.native_handle(), static_cast<std::size_t>(1) << InID);
+		SetThreadAffinityMask(ThreadHandle.native_handle(), static_cast<size_t>(1) << InID);
 
 #if _DEBUG || NDEBUG
-	SetThreadDescription(ThreadHandle.native_handle(), L"Jobs Worker");
+		SetThreadDescription(ThreadHandle.native_handle(), L"Jobs Worker");
 #endif
 
 #else
-	cpu_set_t CPUSet;
-	CPU_ZERO(&CPUSet);
-	CPU_SET(InID, &CPUSet);
+		cpu_set_t CPUSet;
+		CPU_ZERO(&CPUSet);
+		CPU_SET(InID, &CPUSet);
 
-	JOBS_ASSERT(pthread_setaffinity_np(ThreadHandle.native_handle(), sizeof(CPUSet), &CPUSet) == 0, "Error occurred in pthread_setaffinity_np().");
+		JOBS_ASSERT(pthread_setaffinity_np(ThreadHandle.native_handle(), sizeof(CPUSet), &CPUSet) == 0, "Error occurred in pthread_setaffinity_np().");
 #endif
-}
-
-Worker::Worker(Worker&& Other) noexcept
-{
-	Swap(Other);
-}
-
-Worker::~Worker()
-{
-	if (ThreadHandle.native_handle())
-	{
-		// Only log if we're not a moved worker shell.
-		JOBS_LOG(LogLevel::Log, "Destroying thread.");
 	}
 
-	// The thread may have already finished, so validate our handle first.
-	if (ThreadHandle.joinable())
+	Worker::Worker(Worker&& Other) noexcept
 	{
-		ThreadHandle.join();
+		Swap(Other);
 	}
-}
 
-Worker& Worker::operator=(Worker&& Other) noexcept
-{
-	Swap(Other);
+	Worker::~Worker()
+	{
+		if (ThreadHandle.native_handle())
+		{
+			// Only log if we're not a moved worker shell.
+			JOBS_LOG(LogLevel::Log, "Destroying thread.");
+		}
 
-	return *this;
-}
+		// The thread may have already finished, so validate our handle first.
+		if (ThreadHandle.joinable())
+		{
+			ThreadHandle.join();
+		}
+	}
 
-bool Worker::IsReady() const
-{
-	return Ready.load(std::memory_order_acquire);
-}
+	Worker& Worker::operator=(Worker&& Other) noexcept
+	{
+		Swap(Other);
 
-std::thread& Worker::GetHandle()
-{
-	return ThreadHandle;
-}
+		return *this;
+	}
 
-std::thread::id Worker::GetNativeID() const
-{
-	return ThreadHandle.get_id();
-}
+	bool Worker::IsReady() const
+	{
+		return Ready.load(std::memory_order_acquire);
+	}
 
-std::size_t Worker::GetID() const
-{
-	return ID;
-}
+	std::thread& Worker::GetHandle()
+	{
+		return ThreadHandle;
+	}
 
-Fiber& Worker::GetThreadFiber() const
-{
-	return *ThreadFiber;
-}
+	std::thread::id Worker::GetNativeID() const
+	{
+		return ThreadHandle.get_id();
+	}
 
-moodycamel::ConcurrentQueue<Job>& Worker::GetJobQueue()
-{
-	return JobQueue;
-}
+	size_t Worker::GetID() const
+	{
+		return ID;
+	}
 
-bool Worker::IsValidFiberIndex(std::size_t Index) const
-{
-	return Index != InvalidFiberIndex;
-}
+	Fiber& Worker::GetThreadFiber() const
+	{
+		return *ThreadFiber;
+	}
 
-void Worker::Swap(Worker& Other) noexcept
-{
-	std::swap(Owner, Other.Owner);
-	std::swap(ThreadHandle, Other.ThreadHandle);
-	std::swap(ID, Other.ID);
-	std::swap(ThreadFiber, Other.ThreadFiber);
-	std::swap(JobQueue, Other.JobQueue);
+	moodycamel::ConcurrentQueue<Job>& Worker::GetJobQueue()
+	{
+		return JobQueue;
+	}
+
+	bool Worker::IsValidFiberIndex(size_t Index) const
+	{
+		return Index != InvalidFiberIndex;
+	}
+
+	void Worker::Swap(Worker& Other) noexcept
+	{
+		std::swap(Owner, Other.Owner);
+		std::swap(ThreadHandle, Other.ThreadHandle);
+		std::swap(ID, Other.ID);
+		std::swap(ThreadFiber, Other.ThreadFiber);
+		std::swap(JobQueue, Other.JobQueue);
+	}
 }
