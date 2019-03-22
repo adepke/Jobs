@@ -73,10 +73,13 @@ namespace Jobs
 		void Initialize(size_t ThreadCount = 0);
 
 		template <typename U>
-		void Enqueue(U&& Job);
+		void Enqueue(U&& InJob);
 
 		template <typename U>
-		std::shared_ptr<Counter<>> Enqueue(U&& Job, const std::string& Group);
+		void Enqueue(U&& InJob, const std::shared_ptr<Counter<>>& InCounter);
+
+		template <typename U>
+		std::shared_ptr<Counter<>> Enqueue(U&& InJob, const std::string& Group);
 
 	private:
 		std::variant<std::monostate, Job, size_t> Dequeue();  // Returns a job, a waiting fiber index, or nothing.
@@ -113,6 +116,17 @@ namespace Jobs
 		}
 
 		QueueCV.notify_one();  // Notify one sleeper. They will work steal if they don't get the job enqueued directly.
+	}
+
+	template <typename U>
+	void Manager::Enqueue(U&& InJob, const std::shared_ptr<Counter<>>& InCounter)
+	{
+		static_assert(std::is_same_v<std::decay_t<U>, Job>, "Enqueue only supports objects of type Job");
+
+		InCounter->operator++();
+		InJob.AtomicCounter = InCounter;
+
+		Enqueue(InJob);
 	}
 
 	template <typename U>
