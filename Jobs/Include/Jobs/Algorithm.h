@@ -22,17 +22,7 @@ namespace Jobs
 	template <typename Container, typename Function>
 	void ParallelFor(Manager& InManager, Container&& InContainer, Function InFunction)
 	{
-		std::shared_ptr<Counter<>> Dependency = std::make_shared<Counter<>>(0);
-
-		auto First{ std::begin(InContainer) };
-		const auto Last{ std::end(InContainer) };
-
-		for (; First != Last; ++First)
-		{
-			InManager.Enqueue(Job{ InFunction, const_cast<void*>(static_cast<const void*>(&*First)) }, Dependency);
-		}
-
-		Dependency->Wait(0);
+		ParallelFor(InManager, std::begin(InContainer), std::end(InContainer), InFunction);
 	}
 
 	template <typename Iterator, typename Function>
@@ -47,12 +37,6 @@ namespace Jobs
 	template <typename Container, typename Function>
 	void ParallelForAsync(Manager& InManager, Container&& InContainer, Function InFunction)
 	{
-		auto First{ std::begin(InContainer) };
-		const auto Last{ std::end(InContainer) };
-
-		for (; First != Last; ++First)
-		{
-			InManager.Enqueue(Job{ InFunction, const_cast<void*>(static_cast<const void*>(&*First)) });
-		}
+		ParallelForAsync(InManager, std::begin(InContainer), std::end(InContainer), InFunction);
 	}
 }
