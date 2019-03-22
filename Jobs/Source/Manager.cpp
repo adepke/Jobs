@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Andrew Depke
+
 #include <Jobs/Manager.h>
 
 #include <Jobs/Assert.h>

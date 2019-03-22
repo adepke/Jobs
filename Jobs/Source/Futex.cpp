@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Andrew Depke
+
 #include <Jobs/Futex.h>
 
 #if defined(_WIN32) || defined(_WIN64)

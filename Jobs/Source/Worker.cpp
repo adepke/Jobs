@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Andrew Depke
+
 #include <Jobs/Worker.h>
 
 #include <Jobs/Manager.h>

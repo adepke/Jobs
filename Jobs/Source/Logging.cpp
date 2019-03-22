@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Andrew Depke
+
 #include <Jobs/Logging.h>
 
 #include <cstddef>  // std::size_t

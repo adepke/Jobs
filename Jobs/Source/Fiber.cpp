@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Andrew Depke
+
 #include <Jobs/Fiber.h>
 
 #include <Jobs/Logging.h>

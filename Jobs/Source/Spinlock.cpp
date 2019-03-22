@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Andrew Depke
+
 #include <Jobs/Spinlock.h>
 
 #include <Jobs/Assert.h>
