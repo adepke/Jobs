@@ -10,7 +10,7 @@ namespace Jobs
 {
 	void Spinlock::Lock()
 	{
-		while (Status.test_and_set(std::memory_order_acquire))[[unlikely]]
+		while (Status.test_and_set(std::memory_order_acquire)) [[unlikely]]
 		{
 			std::this_thread::yield();
 		}

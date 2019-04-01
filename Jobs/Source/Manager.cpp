@@ -16,7 +16,7 @@ namespace Jobs
 		JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
 
 		// Spin until the manager is ready.
-		while (!Owner->Ready.load(std::memory_order_acquire))[[unlikely]]
+		while (!Owner->Ready.load(std::memory_order_acquire)) [[unlikely]]
 		{
 			std::this_thread::yield();
 		}
@@ -191,7 +191,7 @@ namespace Jobs
 			Worker NewWorker{ this, Iter, &ManagerWorkerEntry };
 
 			// Fix for a rare data race when the swap occurs while the worker is saving the fiber pointer.
-			while (!NewWorker.IsReady())[[unlikely]]
+			while (!NewWorker.IsReady()) [[unlikely]]
 			{
 				// Should almost never end up spinning here.
 				std::this_thread::yield();
