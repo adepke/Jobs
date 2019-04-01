@@ -7,8 +7,11 @@
 #include <Jobs/WindowsMinimal.h>
 #else
 #define PLATFORM_POSIX 1
+#include <unistd.h>
+#include <sys/syscall.h>
 #include <linux/futex.h>
 #include <sys/time.h>
+#include <limits>
 #endif
 
 #ifndef PLATFORM_WINDOWS
