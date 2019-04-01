@@ -26,11 +26,10 @@ namespace Jobs
 		return WaitOnAddress(Address, CompareAddress, Size, TimeoutNs > 0 ? (TimeoutNs >= 1e6 ? TimeoutNs : 1e6) / 1e6 : INFINITE);
 #else
 		timespec Timeout;
-		Timeout.tv_sec = static_cast<int>(Timeout / 1e9);  // Whole seconds.
-		Timeout.tv_nsec = static_cast<long>(TimeoutNs % 1e9);  // Remaining nano seconds.
+		Timeout.tv_sec = static_cast<time_t>(TimeoutNs / (uint64_t)1e9);  // Whole seconds.
+		Timeout.tv_nsec = static_cast<long>(TimeoutNs % (uint64_t)1e9);  // Remaining nano seconds.
 
-		futex(CompareAddress, FUTEX_WAIT, , TimeoutNs > 0 ? &Timeout : nullptr, , );
-		sys_futex() ?
+		syscall(SYS_futex, CompareAddress, FUTEX_WAIT, &Address, TimeoutNs > 0 ? &Timeout : nullptr, nullptr, 0);
 #endif
 	}
 
@@ -41,6 +40,7 @@ namespace Jobs
 #if PLATFORM_WINDOWS
 			WakeByAddressSingle(Address);
 #else
+			syscall(Address, FUTEX_WAKE, 1);
 #endif
 		}
 	}
@@ -52,6 +52,7 @@ namespace Jobs
 #if PLATFORM_WINDOWS
 			WakeByAddressAll(Address);
 #else
+			syscall(Address, FUTEX_WAKE, std::numeric_limits<int>::max());
 #endif
 		}
 	}
