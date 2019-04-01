@@ -273,9 +273,8 @@ namespace Jobs
 	{
 		for (auto Index = 0; Index < Fibers.size(); ++Index)
 		{
-			// #TODO: See if we're able to get away with a weak CAS.
 			auto Expected{ true };
-			if (Fibers[Index].second.compare_exchange_strong(Expected, false))  // #TODO: Memory order.
+			if (Fibers[Index].second.compare_exchange_weak(Expected, false, std::memory_order_acquire))
 			{
 				return Index;
 			}
