@@ -40,7 +40,7 @@ namespace Jobs
 #if PLATFORM_WINDOWS
 			WakeByAddressSingle(Address);
 #else
-			syscall(Address, FUTEX_WAKE, 1);
+			syscall(SYS_futex, Address, FUTEX_WAKE, 1);
 #endif
 		}
 	}
@@ -52,7 +52,7 @@ namespace Jobs
 #if PLATFORM_WINDOWS
 			WakeByAddressAll(Address);
 #else
-			syscall(Address, FUTEX_WAKE, std::numeric_limits<int>::max());
+			syscall(SYS_futex, Address, FUTEX_WAKE, std::numeric_limits<int>::max());
 #endif
 		}
 	}
