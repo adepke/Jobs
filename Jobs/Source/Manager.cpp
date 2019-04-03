@@ -82,7 +82,7 @@ namespace Jobs
 						auto StrongDependency{ Dependency.first.lock() };
 						JOBS_LOG(LogLevel::Log, "Current: %d Required: %d", StrongDependency->Get(), Dependency.second);
 
-						if (auto StrongDependency{ Dependency.first.lock() }; !StrongDependency->WaitUserSpace(Dependency.second, std::chrono::milliseconds{ 800 }))
+						if (auto StrongDependency{ Dependency.first.lock() }; !StrongDependency->WaitUserSpace(Dependency.second, std::chrono::milliseconds{ 1 }))
 						{
 							// This dependency timed out, move ourselves to the wait pool.
 							JOBS_LOG(LogLevel::Log, "Job dependencies timed out, moving to the wait pool.");
