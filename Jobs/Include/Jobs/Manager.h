@@ -96,72 +96,90 @@ namespace Jobs
 	template <typename U>
 	void Manager::Enqueue(U&& InJob)
 	{
-		static_assert(std::is_same_v<std::decay_t<U>, Job>, "Enqueue only supports objects of type Job");
-
-		auto ThisThreadID{ GetThisThreadID() };
-
-		if (IsValidID(ThisThreadID))
+		if constexpr (!std::is_same_v<std::decay_t<U>, Job>)
 		{
-			Workers[ThisThreadID].GetJobQueue().enqueue(std::forward<U>(InJob));
+			static_assert(false, "Enqueue only supports objects of type Job");
 		}
 
 		else
 		{
-			auto CachedEI{ EnqueueIndex.load(std::memory_order_acquire) };
+			auto ThisThreadID{ GetThisThreadID() };
 
-			// Note: We might lose an increment here if this runs in parallel, but we would rather suffer that instead of locking.
-			EnqueueIndex.store((CachedEI + 1) % Workers.size(), std::memory_order_release);
+			if (IsValidID(ThisThreadID))
+			{
+				Workers[ThisThreadID].GetJobQueue().enqueue(std::forward<U>(InJob));
+			}
 
-			Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(InJob));
+			else
+			{
+				auto CachedEI{ EnqueueIndex.load(std::memory_order_acquire) };
+
+				// Note: We might lose an increment here if this runs in parallel, but we would rather suffer that instead of locking.
+				EnqueueIndex.store((CachedEI + 1) % Workers.size(), std::memory_order_release);
+
+				Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(InJob));
+			}
+
+			QueueCV.notify_one();  // Notify one sleeper. They will work steal if they don't get the job enqueued directly.
 		}
-
-		QueueCV.notify_one();  // Notify one sleeper. They will work steal if they don't get the job enqueued directly.
 	}
 
 	template <typename U>
 	void Manager::Enqueue(U&& InJob, const std::shared_ptr<Counter<>>& InCounter)
 	{
-		static_assert(std::is_same_v<std::decay_t<U>, Job>, "Enqueue only supports objects of type Job");
+		if constexpr (!std::is_same_v<std::decay_t<U>, Job>)
+		{
+			static_assert(false, "Enqueue only supports objects of type Job");
+		}
 
-		InCounter->operator++();
-		InJob.AtomicCounter = InCounter;
+		else
+		{
+			InCounter->operator++();
+			InJob.AtomicCounter = InCounter;
 
-		Enqueue(InJob);
+			Enqueue(InJob);
+		}
 	}
 
 	template <typename U>
 	std::shared_ptr<Counter<>> Manager::Enqueue(U&& InJob, const std::string& Group)
 	{
-		static_assert(std::is_same_v<std::decay_t<U>, Job>, "Enqueue only supports objects of type Job");
-
-		std::shared_ptr<Counter<>> GroupCounter;
-		auto AllocateCounter{ []() { return std::make_shared<Counter<>>(1); } };
-
-		if (Group.empty())
+		if constexpr (!std::is_same_v<std::decay_t<U>, Job>)
 		{
-			GroupCounter = std::move(AllocateCounter());
+			static_assert(false, "Enqueue only supports objects of type Job");
 		}
 
 		else
 		{
-			auto GroupIter{ GroupMap.find(Group) };
+			std::shared_ptr<Counter<>> GroupCounter;
+			auto AllocateCounter{ []() { return std::make_shared<Counter<>>(1); } };
 
-			if (GroupIter != GroupMap.end())
+			if (Group.empty())
 			{
-				GroupCounter = GroupIter->second;
-				GroupCounter->operator++();
+				GroupCounter = std::move(AllocateCounter());
 			}
 
 			else
 			{
-				GroupCounter = std::move(AllocateCounter());
-				GroupMap.insert({ Group, GroupCounter });
+				auto GroupIter{ GroupMap.find(Group) };
+
+				if (GroupIter != GroupMap.end())
+				{
+					GroupCounter = GroupIter->second;
+					GroupCounter->operator++();
+				}
+
+				else
+				{
+					GroupCounter = std::move(AllocateCounter());
+					GroupMap.insert({ Group, GroupCounter });
+				}
 			}
+
+			InJob.AtomicCounter = GroupCounter;
+			Enqueue(InJob);
+
+			return GroupCounter;
 		}
-
-		InJob.AtomicCounter = GroupCounter;
-		Enqueue(InJob);
-
-		return GroupCounter;
 	}
 }
