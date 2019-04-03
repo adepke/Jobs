@@ -153,7 +153,6 @@
     <ClCompile Include="Source\Futex.cpp" />
     <ClCompile Include="Source\Logging.cpp" />
     <ClCompile Include="Source\Manager.cpp" />
-    <ClCompile Include="Source\Spinlock.cpp" />
     <ClCompile Include="Source\Worker.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

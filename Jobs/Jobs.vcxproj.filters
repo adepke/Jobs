@@ -62,9 +62,6 @@
     <ClCompile Include="Source\Fiber.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Spinlock.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Manager.cpp">
       <Filter>Source</Filter>
     </ClCompile>

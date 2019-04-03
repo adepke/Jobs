@@ -2,7 +2,8 @@
 
 #pragma once
 
-#include <atomic>
+#include <atomic>  // std::atomic_flag
+#include <thread>  // std::this_thread
 
 namespace Jobs
 {
@@ -19,8 +20,26 @@ namespace Jobs
 		Spinlock& operator=(const Spinlock&) = delete;
 		Spinlock& operator=(Spinlock&&) noexcept = delete;
 
-		void Lock();
-		bool TryLock();
-		void Unlock();
+		inline void Lock();
+		inline bool TryLock();
+		inline void Unlock();
 	};
+
+	void Spinlock::Lock()
+	{
+		while (Status.test_and_set(std::memory_order_acquire))[[unlikely]]
+		{
+			std::this_thread::yield();
+		}
+	}
+
+	bool Spinlock::TryLock()
+	{
+		return !Status.test_and_set(std::memory_order_acquire);
+	}
+
+	void Spinlock::Unlock()
+	{
+		Status.clear(std::memory_order_release);
+	}
 }
