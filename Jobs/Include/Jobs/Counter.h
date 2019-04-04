@@ -5,7 +5,7 @@
 #include <atomic>  // std::atomic
 #include <mutex>  // std::mutex
 #include <Jobs/Futex.h>
-#include <condition_variable>  // std::condition_variable
+#include <Jobs/FutexConditionVariable.h>
 
 namespace Jobs
 {
@@ -19,9 +19,8 @@ namespace Jobs
 
 	private:
 		std::atomic<T> Internal;
-		std::mutex KernelLock;
-		Futex UserSpaceLock;
-		std::condition_variable WaitCV;
+		Futex InsideLock;  // Timed unsafe signaling for jobs.
+		FutexConditionVariable OutsideLock;  // Blind spot safe signaling for non-worker threads.
 
 		bool Evaluate(const T& ExpectedValue) const
 		{
@@ -51,10 +50,10 @@ namespace Jobs
 		template <typename Rep, typename Period>
 		bool WaitFor(T ExpectedValue, const std::chrono::duration<Rep, Period>& Timeout);
 
-	protected:
-		// Futex based blocking, reserved for jobs.
+	private:
+		// Futex based blocking, reserved for jobs. Susceptible to blind spot signaling.
 		template <typename Rep, typename Period>
-		bool WaitUserSpace(T ExpectedValue, const std::chrono::duration<Rep, Period>& Timeout);
+		bool UnsafeWait(T ExpectedValue, const std::chrono::duration<Rep, Period>& Timeout);
 	};
 
 	template <typename T>
@@ -78,12 +77,13 @@ namespace Jobs
 	{
 		--Internal;
 
-		// Notify the user space lock.
-		UserSpaceLock.NotifyAll();
+		// Notify waiting jobs.
+		InsideLock.NotifyAll();  // We don't notify under lock since a blind spot signal isn't fatal, it will only cost us the timeout period.
 
-		// Notify the kernel lock.
-		std::lock_guard LocalLock{ KernelLock };
-		WaitCV.notify_all();
+		// Notify waiting outsiders.
+		OutsideLock.Lock();
+		OutsideLock.NotifyAll();  // Notify under lock to prevent a blind spot signal, which can be fatal.
+		OutsideLock.Unlock();
 
 		return *this;
 	}
@@ -99,8 +99,9 @@ namespace Jobs
 	{
 		while (!Evaluate(ExpectedValue))
 		{
-			std::unique_lock LocalLock{ KernelLock };
-			WaitCV.wait(LocalLock);
+			OutsideLock.Lock();
+			OutsideLock.Wait();
+			OutsideLock.Unlock();
 		}
 	}
 
@@ -112,10 +113,11 @@ namespace Jobs
 
 		while (!Evaluate(ExpectedValue))
 		{
-			std::unique_lock LocalLock{ KernelLock };
-			auto Status{ WaitCV.wait_for(LocalLock, Timeout) };
+			OutsideLock.Lock();
+			bool Result{ OutsideLock.WaitFor(Timeout) };
+			OutsideLock.Unlock();
 
-			if (Status == std::cv_status::timeout || Start + std::chrono::system_clock::now() >= Timeout)
+			if (!Result || Start + std::chrono::system_clock::now() >= Timeout)
 			{
 				return false;
 			}
@@ -126,12 +128,12 @@ namespace Jobs
 
 	template <typename T>
 	template <typename Rep, typename Period>
-	bool Counter<T>::WaitUserSpace(T ExpectedValue, const std::chrono::duration<Rep, Period>& Timeout)
+	bool Counter<T>::UnsafeWait(T ExpectedValue, const std::chrono::duration<Rep, Period>& Timeout)
 	{
 		// InternalCapture is the saved state of Internal at the time of sleeping. We will use this to know if it changed.
 		if (auto InternalCapture{ Internal.load() }; InternalCapture != ExpectedValue)  // #TODO: Memory order.
 		{
-			UserSpaceLock.Set(&Internal);
+			InsideLock.Set(&Internal);
 
 			auto TimeRemaining{ Timeout };  // Used to represent the time budget of the sleep operation. Changes.
 			auto Start{ std::chrono::system_clock::now() };
@@ -139,7 +141,7 @@ namespace Jobs
 			// The counter can change multiple times during our allocated timeout period, so we need to loop until we either timeout of successfully met expected value.
 			while (true)
 			{
-				if (UserSpaceLock.Wait(&InternalCapture, TimeRemaining))
+				if (InsideLock.Wait(&InternalCapture, TimeRemaining))
 				{
 					// Value changed, did not time out. Re-evaluate and potentially try again if we have time.
 

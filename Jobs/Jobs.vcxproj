@@ -136,9 +136,9 @@
     <ClInclude Include="Include\Jobs\Algorithm.h" />
     <ClInclude Include="Include\Jobs\Assert.h" />
     <ClInclude Include="Include\Jobs\Counter.h" />
-    <ClInclude Include="Include\Jobs\CriticalSection.h" />
     <ClInclude Include="Include\Jobs\Fiber.h" />
     <ClInclude Include="Include\Jobs\Futex.h" />
+    <ClInclude Include="Include\Jobs\FutexConditionVariable.h" />
     <ClInclude Include="Include\Jobs\Job.h" />
     <ClInclude Include="Include\Jobs\Logging.h" />
     <ClInclude Include="Include\Jobs\Manager.h" />
@@ -148,7 +148,6 @@
     <ClInclude Include="ThirdParty\ConcurrentQueue\concurrentqueue.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\CriticalSection.cpp" />
     <ClCompile Include="Source\Fiber.cpp" />
     <ClCompile Include="Source\Futex.cpp" />
     <ClCompile Include="Source\Logging.cpp" />
