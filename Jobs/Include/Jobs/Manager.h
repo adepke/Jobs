@@ -54,8 +54,10 @@ namespace Jobs
 		// Used to cycle the worker thread to enqueue in.
 		std::atomic_uint EnqueueIndex;
 
+		// #TODO: Experiment with alignment.
 		FutexConditionVariable QueueCV;
 
+		// #TODO: Use a more efficient hash map data structure.
 		std::map<std::string, std::shared_ptr<Counter<>>> GroupMap;
 
 	public:

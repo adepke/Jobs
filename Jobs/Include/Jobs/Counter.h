@@ -97,12 +97,14 @@ namespace Jobs
 	template <typename T>
 	void Counter<T>::Wait(T ExpectedValue)
 	{
+		OutsideLock.Lock();
+
 		while (!Evaluate(ExpectedValue))
 		{
-			OutsideLock.Lock();
 			OutsideLock.Wait();
-			OutsideLock.Unlock();
 		}
+
+		OutsideLock.Unlock();
 	}
 
 	template <typename T>
