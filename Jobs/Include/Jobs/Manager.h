@@ -11,8 +11,6 @@
 #include <utility>  // std::move, std::pair
 #include <thread>  // std::thread
 #include <variant>  // std::variant
-#include <Jobs/CriticalSection.h>
-#include <condition_variable>  // std::condition_variable
 #include <mutex>  // std::mutex
 #include <string>  // std::string
 #include <memory>  // std::shared_ptr, std::unique_ptr
@@ -51,14 +49,14 @@ namespace Jobs
 		static constexpr auto InvalidID = std::numeric_limits<size_t>::max();
 
 		std::atomic_bool Ready;
-		std::atomic_bool Shutdown;
+		alignas(64) std::atomic_bool Shutdown;
 
 		// Used to cycle the worker thread to enqueue in.
 		std::atomic_uint EnqueueIndex;
 
-		std::condition_variable QueueCV;
-		std::mutex QueueCVLock;
+		alignas(64) FutexConditionVariable QueueCV;
 
+		// #TODO: Use a more efficient hash map data structure.
 		std::map<std::string, std::shared_ptr<Counter<>>> GroupMap;
 
 	public:
@@ -120,7 +118,11 @@ namespace Jobs
 				Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(InJob));
 			}
 
-			QueueCV.notify_one();  // Notify one sleeper. They will work steal if they don't get the job enqueued directly.
+			// #NOTE: Safeguarding the notify can destroy performance in high enqueue situations. This leaves a blind spot potential,
+			// but the risk is worth it. Even if a blind spot signal happens, the worker will just sleep until a new enqueue arrives, where it can recover.
+			//QueueCV.Lock();
+			QueueCV.NotifyOne();  // Notify one sleeper. They will work steal if they don't get the job enqueued directly.
+			//QueueCV.Unlock();
 		}
 	}
 

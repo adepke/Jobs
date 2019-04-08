@@ -68,9 +68,14 @@ namespace Jobs
 				}
 			}
 
+			FData->Owner->QueueCV.Lock();
+
+			// #TODO: Refactor.
 			auto DequeueResult{ std::move(FData->Owner->Dequeue()) };
 			if (auto* JobResult{ std::get_if<Job>(&DequeueResult) })
 			{
+				FData->Owner->QueueCV.Unlock();
+
 				// Loop until we satisfy all of our dependencies.
 				bool RequiresEvaluation = true;
 				while (RequiresEvaluation)
@@ -79,10 +84,7 @@ namespace Jobs
 
 					for (const auto& Dependency : JobResult->Dependencies)
 					{
-						auto StrongDependency{ Dependency.first.lock() };
-						JOBS_LOG(LogLevel::Log, "Current: %d Required: %d", StrongDependency->Get(), Dependency.second);
-
-						if (auto StrongDependency{ Dependency.first.lock() }; !StrongDependency->WaitUserSpace(Dependency.second, std::chrono::milliseconds{ 1 }))
+						if (auto StrongDependency{ Dependency.first.lock() }; !StrongDependency->UnsafeWait(Dependency.second, std::chrono::milliseconds{ 1 }))
 						{
 							// This dependency timed out, move ourselves to the wait pool.
 							JOBS_LOG(LogLevel::Log, "Job dependencies timed out, moving to the wait pool.");
@@ -116,6 +118,8 @@ namespace Jobs
 
 			else if (auto* WaitingFiberIndex{ std::get_if<size_t>(&DequeueResult) })
 			{
+				FData->Owner->QueueCV.Unlock();
+
 				auto& ThisThread{ FData->Owner->Workers[FData->Owner->GetThisThreadID()] };
 				auto& ThisFiber{ FData->Owner->Fibers[ThisThread.FiberIndex] };
 				auto& WaitingFiber{ FData->Owner->Fibers[*WaitingFiberIndex].first };
@@ -127,20 +131,20 @@ namespace Jobs
 				WaitingFiber.Schedule(ThisFiber.first);  // Schedule the waiting fiber. It might be a long time before we resume, if ever.
 			}
 
-			// #BUG: Going from dequeue fail to sleeping is not an atomic operation, so we potentially miss work enqueued in this period.
 			else
 			{
 				JOBS_LOG(LogLevel::Log, "Fiber sleeping.");
 
-				std::unique_lock Lock{ FData->Owner->QueueCVLock };
-
 				// Test the shutdown condition once more under lock, as it could've been set during the transitional period.
 				if (!FData->Owner->CanContinue())
 				{
+					FData->Owner->QueueCV.Unlock();
+
 					break;
 				}
 
-				FData->Owner->QueueCV.wait(Lock);  // We will be woken up either by a shutdown event or if new work is available.
+				FData->Owner->QueueCV.Wait();  // We will be woken up either by a shutdown event or if new work is available.
+				FData->Owner->QueueCV.Unlock();
 			}
 		}
 
@@ -154,11 +158,11 @@ namespace Jobs
 
 	Manager::~Manager()
 	{
-		std::unique_lock Lock{ QueueCVLock };  // This is used to make sure we don't let any fibers slip by and not catch the shutdown notify, which causes a deadlock.
+		QueueCV.Lock();  // This is used to make sure we don't let any fibers slip by and not catch the shutdown notify, which causes a deadlock.
 		Shutdown.store(true, std::memory_order_seq_cst);
 
-		QueueCV.notify_all();  // Wake all sleepers, it's time to shutdown.
-		Lock.unlock();
+		QueueCV.NotifyAll();  // Wake all sleepers, it's time to shutdown.
+		QueueCV.Unlock();
 
 		// Wait for all of the workers to die before deleting the fiber data.
 		for (auto& Worker : Workers)

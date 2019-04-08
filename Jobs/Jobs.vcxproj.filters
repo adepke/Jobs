@@ -24,9 +24,6 @@
     <ClInclude Include="Include\Jobs\Counter.h">
       <Filter>Include</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Jobs\CriticalSection.h">
-      <Filter>Include</Filter>
-    </ClInclude>
     <ClInclude Include="Include\Jobs\Fiber.h">
       <Filter>Include</Filter>
     </ClInclude>
@@ -54,6 +51,9 @@
     <ClInclude Include="Include\Jobs\Algorithm.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Jobs\FutexConditionVariable.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Logging.cpp">
@@ -66,9 +66,6 @@
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\Worker.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\CriticalSection.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\Futex.cpp">
