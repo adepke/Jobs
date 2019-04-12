@@ -49,12 +49,12 @@ namespace Jobs
 		static constexpr auto InvalidID = std::numeric_limits<size_t>::max();
 
 		std::atomic_bool Ready;
-		alignas(64) std::atomic_bool Shutdown;
+		alignas(std::hardware_destructive_interference_size) std::atomic_bool Shutdown;
 
 		// Used to cycle the worker thread to enqueue in.
 		std::atomic_uint EnqueueIndex;
 
-		alignas(64) FutexConditionVariable QueueCV;
+		alignas(std::hardware_destructive_interference_size) FutexConditionVariable QueueCV;
 
 		// #TODO: Use a more efficient hash map data structure.
 		std::map<std::string, std::shared_ptr<Counter<>>> GroupMap;
