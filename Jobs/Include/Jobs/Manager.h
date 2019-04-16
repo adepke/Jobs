@@ -17,6 +17,7 @@
 #include <Jobs/Counter.h>
 #include <map>  // std::map
 #include <type_traits>  // std::is_same, std::decay
+#include <optional>  // std::optional
 
 namespace Jobs
 {
@@ -80,15 +81,14 @@ namespace Jobs
 		std::shared_ptr<Counter<>> Enqueue(U&& InJob, const std::string& Group);
 
 	private:
-		std::variant<std::monostate, Job, size_t> Dequeue();  // Returns a job, a waiting fiber index, or nothing.
+		std::optional<Job> Dequeue(size_t ThreadID);
 
 		size_t GetThisThreadID() const;
-		bool IsValidID(size_t ID) const;
+		inline bool IsValidID(size_t ID) const;
 
-		bool CanContinue() const;
+		inline bool CanContinue() const;
 
-		// Returns a fiber that is not currently scheduled.
-		size_t GetAvailableFiber();
+		size_t GetAvailableFiber();  // Returns a fiber that is not currently scheduled.
 	};
 
 	template <typename U>
@@ -183,5 +183,15 @@ namespace Jobs
 
 			return GroupCounter;
 		}
+	}
+
+	bool Manager::IsValidID(size_t ID) const
+	{
+		return ID != InvalidID;
+	}
+
+	bool Manager::CanContinue() const
+	{
+		return !Shutdown.load(std::memory_order_acquire);
 	}
 }
