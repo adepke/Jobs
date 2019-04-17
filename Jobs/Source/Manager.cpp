@@ -75,10 +75,7 @@ namespace Jobs
 
 			if (Continue)
 			{
-				FData->Owner->QueueCV.Lock();
-				auto NewJob{ std::move(FData->Owner->Dequeue(ThisThreadID)) };
-				FData->Owner->QueueCV.Unlock();
-				
+				auto NewJob{ std::move(FData->Owner->Dequeue(ThisThreadID)) };	
 				if (NewJob)
 				{
 					Continue = false;  // We're satisfied, don't continue.
