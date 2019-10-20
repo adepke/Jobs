@@ -31,23 +31,28 @@ namespace Jobs
 	public:
 		Worker(Manager* const, size_t InID, EntryType Entry);
 		Worker(const Worker&) = delete;
-		Worker(Worker&& Other) noexcept;
+		Worker(Worker&& Other) noexcept { Swap(Other); }
 		~Worker();
 
 		Worker& operator=(const Worker&) = delete;
-		Worker& operator=(Worker&& Other) noexcept;
+		Worker& operator=(Worker&& Other) noexcept
+		{
+			Swap(Other);
+
+			return *this;
+		}
 
 		size_t FiberIndex = InvalidFiberIndex;  // Index into the owner's fiber pool that we're executing. We need this for rescheduling the thread fiber.
 
-		bool IsReady() const;
-		std::thread& GetHandle();
-		std::thread::id GetNativeID() const;
-		size_t GetID() const;
+		bool IsReady() const { return Ready.load(std::memory_order_acquire); }
+		std::thread& GetHandle() { return ThreadHandle; }
+		std::thread::id GetNativeID() const { return ThreadHandle.get_id(); }
+		size_t GetID() const { return ID; }
 
-		Fiber& GetThreadFiber() const;
-		moodycamel::ConcurrentQueue<Job>& GetJobQueue();
+		Fiber& GetThreadFiber() const { return *ThreadFiber; }
+		moodycamel::ConcurrentQueue<Job>& GetJobQueue() { return JobQueue; }
 
-		bool IsValidFiberIndex(size_t Index) const;
+		constexpr bool IsValidFiberIndex(size_t Index) const { return Index != InvalidFiberIndex; }
 
 		void Swap(Worker& Other) noexcept;
 	};
