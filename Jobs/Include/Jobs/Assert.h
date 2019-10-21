@@ -6,8 +6,8 @@
 #include <exception>  // std::terminate
 
 #if _DEBUG || NDEBUG
-  // MSVC supports optional macro stream operator after 15.9
-  #if defined(_MSC_VER) && _MSC_VER <= 1916
+  // MSVC doesn't yet support __VA_OPT__, see https://en.cppreference.com/w/cpp/compiler_support
+  #if defined(_MSC_VER) /*&& _MSC_VER <= 1916*/
     #define JOBS_ASSERT(Expression, ...) \
 	do \
 	{ \
