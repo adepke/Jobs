@@ -7,7 +7,7 @@
 #include <Jobs/Spinlock.h>
 
 #ifndef JOBS_DISABLE_LOGGING
-#define JOBS_LOG(Level, Format, ...) LogManager::Get().Log(Level, Format, ## __VA_ARGS__)
+#define JOBS_LOG(Level, Format, ...) Jobs::LogManager::Get().Log(Level, Format, ## __VA_ARGS__)
 #else
 #define JOBS_LOG(Level, Format, ...) do {} while (0)
 #endif
