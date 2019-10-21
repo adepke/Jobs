@@ -54,6 +54,9 @@
     <ClInclude Include="Include\Jobs\FutexConditionVariable.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Jobs\DependencyAllocator.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Logging.cpp">

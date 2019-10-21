@@ -136,6 +136,7 @@
     <ClInclude Include="Include\Jobs\Algorithm.h" />
     <ClInclude Include="Include\Jobs\Assert.h" />
     <ClInclude Include="Include\Jobs\Counter.h" />
+    <ClInclude Include="Include\Jobs\DependencyAllocator.h" />
     <ClInclude Include="Include\Jobs\Fiber.h" />
     <ClInclude Include="Include\Jobs\Futex.h" />
     <ClInclude Include="Include\Jobs\FutexConditionVariable.h" />
