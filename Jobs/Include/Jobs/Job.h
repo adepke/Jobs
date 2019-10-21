@@ -6,6 +6,7 @@
 #include <vector>  // std::vector
 #include <utility>  // std::pair
 #include <Jobs/Counter.h>
+#include <Jobs/DependencyAllocator.h>
 #include <Jobs/Assert.h>
 
 namespace Jobs
@@ -23,7 +24,8 @@ namespace Jobs
 		std::weak_ptr<Counter<>> AtomicCounter;
 
 		// List of dependencies this job needs before executing. Pairs of counters to expected values.
-		std::vector<std::pair<std::weak_ptr<Counter<>>, Counter<>::Type>> Dependencies;
+		using DependencyType = std::pair<std::weak_ptr<Counter<>>, Counter<>::Type>;
+		std::vector<DependencyType, DependencyAllocator<DependencyType, 2>> Dependencies;
 
 	public:
 		Job() = default;
