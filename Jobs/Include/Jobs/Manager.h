@@ -17,6 +17,7 @@
 #include <Jobs/Counter.h>
 #include <map>  // std::map
 #include <type_traits>  // std::is_same, std::decay
+#include <optional>  // std::optional
 
 namespace Jobs
 {
@@ -49,15 +50,18 @@ namespace Jobs
 		static constexpr auto InvalidID = std::numeric_limits<size_t>::max();
 
 		std::atomic_bool Ready;
-		alignas(64) std::atomic_bool Shutdown;
+		alignas(std::hardware_destructive_interference_size) std::atomic_bool Shutdown;
 
 		// Used to cycle the worker thread to enqueue in.
 		std::atomic_uint EnqueueIndex;
 
-		alignas(64) FutexConditionVariable QueueCV;
+		alignas(std::hardware_destructive_interference_size) FutexConditionVariable QueueCV;
 
 		// #TODO: Use a more efficient hash map data structure.
 		std::map<std::string, std::shared_ptr<Counter<>>> GroupMap;
+
+		template <typename U>
+		void EnqueueInternal(U&& InJob);
 
 	public:
 		Manager() = default;
@@ -73,23 +77,52 @@ namespace Jobs
 		template <typename U>
 		void Enqueue(U&& InJob);
 
+		template <size_t Size>
+		void Enqueue(Job (&InJobs)[Size]);
+
 		template <typename U>
 		void Enqueue(U&& InJob, const std::shared_ptr<Counter<>>& InCounter);
+
+		template <size_t Size>
+		void Enqueue(Job (&InJobs)[Size], const std::shared_ptr<Counter<>>& InCounter);
 
 		template <typename U>
 		std::shared_ptr<Counter<>> Enqueue(U&& InJob, const std::string& Group);
 
+		template <size_t Size>
+		std::shared_ptr<Counter<>> Enqueue(Job (&InJobs)[Size], const std::string& Group);
+
 	private:
-		std::variant<std::monostate, Job, size_t> Dequeue();  // Returns a job, a waiting fiber index, or nothing.
+		std::optional<Job> Dequeue(size_t ThreadID);
 
 		size_t GetThisThreadID() const;
-		bool IsValidID(size_t ID) const;
+		inline bool IsValidID(size_t ID) const;
 
-		bool CanContinue() const;
+		inline bool CanContinue() const;
 
-		// Returns a fiber that is not currently scheduled.
-		size_t GetAvailableFiber();
+		size_t GetAvailableFiber();  // Returns a fiber that is not currently scheduled.
 	};
+
+	template <typename U>
+	void Manager::EnqueueInternal(U&& InJob)
+	{
+		auto ThisThreadID{ GetThisThreadID() };
+
+		if (IsValidID(ThisThreadID))
+		{
+			Workers[ThisThreadID].GetJobQueue().enqueue(std::forward<U>(InJob));
+		}
+
+		else
+		{
+			auto CachedEI{ EnqueueIndex.load(std::memory_order_acquire) };
+
+			// Note: We might lose an increment here if this runs in parallel, but we would rather suffer that instead of locking.
+			EnqueueIndex.store((CachedEI + 1) % Workers.size(), std::memory_order_release);
+
+			Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(InJob));
+		}
+	}
 
 	template <typename U>
 	void Manager::Enqueue(U&& InJob)
@@ -101,22 +134,7 @@ namespace Jobs
 
 		else
 		{
-			auto ThisThreadID{ GetThisThreadID() };
-
-			if (IsValidID(ThisThreadID))
-			{
-				Workers[ThisThreadID].GetJobQueue().enqueue(std::forward<U>(InJob));
-			}
-
-			else
-			{
-				auto CachedEI{ EnqueueIndex.load(std::memory_order_acquire) };
-
-				// Note: We might lose an increment here if this runs in parallel, but we would rather suffer that instead of locking.
-				EnqueueIndex.store((CachedEI + 1) % Workers.size(), std::memory_order_release);
-
-				Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(InJob));
-			}
+			EnqueueInternal(std::forward<U>(InJob));
 
 			// #NOTE: Safeguarding the notify can destroy performance in high enqueue situations. This leaves a blind spot potential,
 			// but the risk is worth it. Even if a blind spot signal happens, the worker will just sleep until a new enqueue arrives, where it can recover.
@@ -124,6 +142,17 @@ namespace Jobs
 			QueueCV.NotifyOne();  // Notify one sleeper. They will work steal if they don't get the job enqueued directly.
 			//QueueCV.Unlock();
 		}
+	}
+
+	template <size_t Size>
+	void Manager::Enqueue(Job (&InJobs)[Size])
+	{
+		for (auto Iter = 0; Iter < Size; ++Iter)
+		{
+			EnqueueInternal(InJobs[Iter]);
+		}
+
+		QueueCV.NotifyAll();  // Notify all sleepers.
 	}
 
 	template <typename U>
@@ -143,6 +172,19 @@ namespace Jobs
 		}
 	}
 
+	template <size_t Size>
+	void Manager::Enqueue(Job (&InJobs)[Size], const std::shared_ptr<Counter<>>& InCounter)
+	{
+		InCounter->operator+=(Size);
+
+		for (auto Iter = 0; Iter < Size; ++Iter)
+		{
+			InJobs[Iter].AtomicCounter = InCounter;
+		}
+
+		Enqueue(InJobs);
+	}
+
 	template <typename U>
 	std::shared_ptr<Counter<>> Manager::Enqueue(U&& InJob, const std::string& Group)
 	{
@@ -154,6 +196,7 @@ namespace Jobs
 		else
 		{
 			std::shared_ptr<Counter<>> GroupCounter;
+
 			auto AllocateCounter{ []() { return std::make_shared<Counter<>>(1); } };
 
 			if (Group.empty())
@@ -183,5 +226,54 @@ namespace Jobs
 
 			return GroupCounter;
 		}
+	}
+
+	template <size_t Size>
+	std::shared_ptr<Counter<>> Manager::Enqueue(Job (&InJobs)[Size], const std::string& Group)
+	{
+		std::shared_ptr<Counter<>> GroupCounter;
+
+		auto AllocateCounter{ []() { return std::make_shared<Counter<>>(1); } };
+
+		if (Group.empty())
+		{
+			GroupCounter = std::move(AllocateCounter());
+		}
+
+		else
+		{
+			auto GroupIter{ GroupMap.find(Group) };
+
+			if (GroupIter != GroupMap.end())
+			{
+				GroupCounter = GroupIter->second;
+				GroupCounter->operator+=(Size);
+			}
+
+			else
+			{
+				GroupCounter = std::move(AllocateCounter());
+				GroupMap.insert({ Group, GroupCounter });
+			}
+		}
+
+		for (auto Iter = 0; Iter < Size; ++Iter)
+		{
+			InJobs[Iter].AtomicCounter = GroupCounter;
+		}
+
+		Enqueue(InJobs);
+
+		return GroupCounter;
+	}
+
+	bool Manager::IsValidID(size_t ID) const
+	{
+		return ID != InvalidID;
+	}
+
+	bool Manager::CanContinue() const
+	{
+		return !Shutdown.load(std::memory_order_acquire);
 	}
 }

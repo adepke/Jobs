@@ -55,11 +55,6 @@ namespace Jobs
 #endif
 	}
 
-	Worker::Worker(Worker&& Other) noexcept
-	{
-		Swap(Other);
-	}
-
 	Worker::~Worker()
 	{
 		if (ThreadHandle.native_handle())
@@ -73,48 +68,6 @@ namespace Jobs
 		{
 			ThreadHandle.join();
 		}
-	}
-
-	Worker& Worker::operator=(Worker&& Other) noexcept
-	{
-		Swap(Other);
-
-		return *this;
-	}
-
-	bool Worker::IsReady() const
-	{
-		return Ready.load(std::memory_order_acquire);
-	}
-
-	std::thread& Worker::GetHandle()
-	{
-		return ThreadHandle;
-	}
-
-	std::thread::id Worker::GetNativeID() const
-	{
-		return ThreadHandle.get_id();
-	}
-
-	size_t Worker::GetID() const
-	{
-		return ID;
-	}
-
-	Fiber& Worker::GetThreadFiber() const
-	{
-		return *ThreadFiber;
-	}
-
-	moodycamel::ConcurrentQueue<Job>& Worker::GetJobQueue()
-	{
-		return JobQueue;
-	}
-
-	bool Worker::IsValidFiberIndex(size_t Index) const
-	{
-		return Index != InvalidFiberIndex;
 	}
 
 	void Worker::Swap(Worker& Other) noexcept
