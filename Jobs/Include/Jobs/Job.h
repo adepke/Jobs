@@ -36,7 +36,7 @@ namespace Jobs
 		Job() = default;
 		Job(EntryType InEntry, void* InData = nullptr) : Entry(InEntry), Data(InData) {}
 
-		void AddDependency(const std::shared_ptr<Counter<>>& Handle, const Counter<>::Type ExpectedValue)
+		void AddDependency(const std::shared_ptr<Counter<>>& Handle, const Counter<>::Type ExpectedValue = Counter<>::Type{ 0 })
 		{
 			Dependencies.push_back({ Handle, ExpectedValue });
 		}
