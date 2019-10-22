@@ -24,7 +24,7 @@ namespace Jobs
 	struct AlgorithmPayload<Container, CustomData>
 	{
 		decltype(std::declval<Container>().begin()) Iterator;
-		CustomData* Data;
+		CustomData Data;
 	};
 
 	namespace Detail
@@ -53,7 +53,7 @@ namespace Jobs
 
 			if constexpr (!std::is_same_v<CustomData, Detail::Empty>)
 			{
-				std::fill(Payloads.begin(), Payloads.end(), AlgorithmPayload<Detail::FakeContainer<Iterator>, std::remove_reference_t<CustomData>>{ First, &Data });
+				std::fill(Payloads.begin(), Payloads.end(), AlgorithmPayload<Detail::FakeContainer<Iterator>, std::remove_reference_t<CustomData>>{ First, Data });
 			}
 
 			const auto CachedFirst = First;
