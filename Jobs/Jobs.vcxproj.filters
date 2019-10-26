@@ -57,6 +57,9 @@
     <ClInclude Include="Include\Jobs\DependencyAllocator.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Jobs\JobBuilder.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Logging.cpp">
@@ -72,6 +75,9 @@
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\Futex.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JobBuilder.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>

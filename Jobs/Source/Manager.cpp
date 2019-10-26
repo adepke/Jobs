@@ -4,8 +4,6 @@
 
 #include <Jobs/Assert.h>
 #include <Jobs/Logging.h>
-#include <Jobs/Fiber.h>
-#include <Jobs/Counter.h>
 
 #include <chrono>  // std::chrono
 
@@ -111,9 +109,17 @@ namespace Jobs
 						}
 					}
 
-					(*NewJob)();
+					if (NewJob->Stream) [[unlikely]]
+					{
+						(*NewJob)(FData->Owner);
+					}
 
-					// Finished, notify the counter if we have one.
+					else
+					{
+						(static_cast<Job>(*NewJob))();  // Slice.
+					}
+
+					// Finished, notify the counter if we have one. Handles expired counters (cleanup jobs) fine.
 					if (auto StrongCounter{ NewJob->AtomicCounter.lock() })
 					{
 						StrongCounter->operator--();
@@ -217,9 +223,9 @@ namespace Jobs
 		Ready.store(true, std::memory_order_release);  // This must be set last.
 	}
 
-	std::optional<Job> Manager::Dequeue(size_t ThreadID)
+	std::optional<JobBuilder> Manager::Dequeue(size_t ThreadID)
 	{
-		Job Result{};
+		JobBuilder Result{};
 
 		if (Workers[ThreadID].GetJobQueue().try_dequeue(Result))
 		{

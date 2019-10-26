@@ -16,9 +16,12 @@ namespace Jobs
 		friend class Manager;
 		friend void ManagerFiberEntry(void* Data);
 
-	private:
+	public:
 		using EntryType = void(*)(void* Data);
 		EntryType Entry = nullptr;
+
+	protected:
+		bool Stream = false;  // Bit to determine if we're a stream structure (JobBuilder).
 
 		void* Data = nullptr;
 		std::weak_ptr<Counter<>> AtomicCounter;

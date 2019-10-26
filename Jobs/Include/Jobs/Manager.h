@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "../../ThirdParty/ConcurrentQueue/concurrentqueue.h"
-#include <Jobs/Job.h>
-#include <Jobs/Fiber.h>
 #include <Jobs/Worker.h>
+#include <Jobs/Fiber.h>
+#include <Jobs/Counter.h>
+
 #include <vector>  // std::vector
 #include <array>  // std::array
 #include <utility>  // std::move, std::pair
@@ -14,7 +14,6 @@
 #include <mutex>  // std::mutex
 #include <string>  // std::string
 #include <memory>  // std::shared_ptr, std::unique_ptr
-#include <Jobs/Counter.h>
 #include <map>  // std::map
 #include <type_traits>  // std::is_same, std::decay
 #include <optional>  // std::optional
@@ -93,7 +92,7 @@ namespace Jobs
 		std::shared_ptr<Counter<>> Enqueue(Job (&InJobs)[Size], const std::string& Group);
 
 	private:
-		std::optional<Job> Dequeue(size_t ThreadID);
+		std::optional<JobBuilder> Dequeue(size_t ThreadID);
 
 		size_t GetThisThreadID() const;
 		inline bool IsValidID(size_t ID) const;
@@ -106,11 +105,17 @@ namespace Jobs
 	template <typename U>
 	void Manager::EnqueueInternal(U&& InJob)
 	{
+		// If we're a job builder, we need to increment the counter before leaving Enqueue.
+		if (InJob.Stream)
+		{
+			InJob.GetCounter().operator++();  // We need to increment the counter since we might end up waiting on it immediately, before the sub jobs are enqueued. Decremented in the job builder.
+		}
+
 		auto ThisThreadID{ GetThisThreadID() };
 
 		if (IsValidID(ThisThreadID))
 		{
-			Workers[ThisThreadID].GetJobQueue().enqueue(std::forward<U>(InJob));
+			Workers[ThisThreadID].GetJobQueue().enqueue(std::forward<JobBuilder>(static_cast<JobBuilder&&>(InJob)));
 		}
 
 		else
@@ -120,21 +125,21 @@ namespace Jobs
 			// Note: We might lose an increment here if this runs in parallel, but we would rather suffer that instead of locking.
 			EnqueueIndex.store((CachedEI + 1) % Workers.size(), std::memory_order_release);
 
-			Workers[CachedEI].GetJobQueue().enqueue(std::forward<U>(InJob));
+			Workers[CachedEI].GetJobQueue().enqueue(std::forward<JobBuilder>(static_cast<JobBuilder&&>(InJob)));
 		}
 	}
 
 	template <typename U>
 	void Manager::Enqueue(U&& InJob)
 	{
-		if constexpr (!std::is_same_v<std::decay_t<U>, Job>)
+		if constexpr (!std::is_same_v<std::decay_t<U>, Job> && !std::is_same_v<std::decay_t<U>, JobBuilder>)
 		{
 			static_assert(false, "Enqueue only supports objects of type Job");
 		}
 
 		else
 		{
-			EnqueueInternal(std::forward<U>(InJob));
+			EnqueueInternal(std::forward<JobBuilder>(static_cast<JobBuilder&&>(InJob)));
 
 			// #NOTE: Safeguarding the notify can destroy performance in high enqueue situations. This leaves a blind spot potential,
 			// but the risk is worth it. Even if a blind spot signal happens, the worker will just sleep until a new enqueue arrives, where it can recover.
@@ -158,7 +163,12 @@ namespace Jobs
 	template <typename U>
 	void Manager::Enqueue(U&& InJob, const std::shared_ptr<Counter<>>& InCounter)
 	{
-		if constexpr (!std::is_same_v<std::decay_t<U>, Job>)
+		if constexpr (std::is_same_v<std::decay_t<U>, JobBuilder>)
+		{
+			static_assert(false, "Cannot enqueue a JobBuilder with a custom counter");
+		}
+
+		else if constexpr (!std::is_same_v<std::decay_t<U>, Job>)
 		{
 			static_assert(false, "Enqueue only supports objects of type Job");
 		}
@@ -188,7 +198,7 @@ namespace Jobs
 	template <typename U>
 	std::shared_ptr<Counter<>> Manager::Enqueue(U&& InJob, const std::string& Group)
 	{
-		if constexpr (!std::is_same_v<std::decay_t<U>, Job>)
+		if constexpr (!std::is_same_v<std::decay_t<U>, Job> && !std::is_same_v<std::decay_t<U>, JobBuilder>)
 		{
 			static_assert(false, "Enqueue only supports objects of type Job");
 		}

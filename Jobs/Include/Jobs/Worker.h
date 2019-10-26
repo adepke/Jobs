@@ -2,11 +2,12 @@
 
 #pragma once
 
+#include "../../ThirdParty/ConcurrentQueue/concurrentqueue.h"
+#include <Jobs/JobBuilder.h>
+
 #include <cstddef>  // std::size_t
 #include <thread>  // std::thread
 #include <atomic>  // std::atomic
-#include <Jobs/Job.h>
-#include "../../ThirdParty/ConcurrentQueue/concurrentqueue.h"
 
 namespace Jobs
 {
@@ -24,7 +25,7 @@ namespace Jobs
 		size_t ID;  // Manager-specific ID.
 
 		Fiber* ThreadFiber = nullptr;
-		moodycamel::ConcurrentQueue<Job> JobQueue;
+		moodycamel::ConcurrentQueue<JobBuilder> JobQueue;
 
 		static constexpr size_t InvalidFiberIndex = std::numeric_limits<size_t>::max();
 
@@ -50,7 +51,7 @@ namespace Jobs
 		size_t GetID() const { return ID; }
 
 		Fiber& GetThreadFiber() const { return *ThreadFiber; }
-		moodycamel::ConcurrentQueue<Job>& GetJobQueue() { return JobQueue; }
+		moodycamel::ConcurrentQueue<JobBuilder>& GetJobQueue() { return JobQueue; }
 
 		constexpr bool IsValidFiberIndex(size_t Index) const { return Index != InvalidFiberIndex; }
 
