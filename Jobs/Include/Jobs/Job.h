@@ -2,12 +2,13 @@
 
 #pragma once
 
-#include <memory>  // std::shared_ptr, std::weak_ptr
-#include <vector>  // std::vector
-#include <utility>  // std::pair
 #include <Jobs/Counter.h>
 #include <Jobs/DependencyAllocator.h>
 #include <Jobs/Assert.h>
+
+#include <memory>  // std::shared_ptr, std::weak_ptr
+#include <vector>  // std::vector
+#include <utility>  // std::pair
 
 namespace Jobs
 {
