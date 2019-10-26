@@ -6,7 +6,6 @@
 
 namespace Jobs
 {
-	// Must stay alive until the jobs have finished!
 	class JobBuilder : public Job
 	{
 		friend class Manager;
