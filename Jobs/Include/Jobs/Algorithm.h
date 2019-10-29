@@ -131,97 +131,120 @@ namespace Jobs
 
 	namespace Detail
 	{
-		constexpr auto PayloadSize = 300;  // Optimized for large data. #TODO: Solve per data set to find the optimal batch size.
-
-		template <typename InIterator, typename UnaryOp, typename OutIterator>
-		struct MapPayload
+		struct NoOp
 		{
-			InIterator Input;
+			template <typename T>
+			auto operator()(T Item) const { return Item; }
+		};
+
+		template <typename Iterator, typename UnaryOp, typename BinaryOp, typename OutIterator>
+		struct MapReducePayload
+		{
+			Iterator Input;
 			size_t Count;
-			UnaryOp Operation;
+			UnaryOp MapOperation;
+			BinaryOp ReduceOperation;
 			OutIterator Output;
 		};
 
-		template <typename Async, typename InIterator, typename OutIterator, typename UnaryOp>
-		void ParallelMapInternal(Manager& InManager, InIterator First, InIterator Last, OutIterator Destination, UnaryOp Operation)
+		template <typename Iterator, typename UnaryOp, typename BinaryOp>
+		auto ParallelMapReduceInternal(Manager& InManager, Iterator First, Iterator Last, UnaryOp MapOperation, BinaryOp ReduceOperation)
 		{
-			std::shared_ptr<Counter<>> Dependency;
+			using IntermediateType = decltype(MapOperation(*First));
+			using ResultType = decltype(ReduceOperation(std::declval<IntermediateType>(), std::declval<IntermediateType>()));
+			using ResultContainerType = std::vector<ResultType>;
+			using PayloadType = MapReducePayload<Iterator, UnaryOp, BinaryOp, decltype(std::declval<ResultContainerType>().begin())>;
 
-			if constexpr (std::is_same_v<Async, std::false_type>)
+			auto Dependency{ std::make_shared<Counter<>>(0) };
+
+			const auto Distance = std::distance(First, Last);  // Data set size.
+
+			// If we have a relatively small data set, serial execution is probably faster.
+			if (Distance < 1000)
 			{
-				Dependency = std::make_shared<Counter<>>(0);
-			}
-
-			const auto Distance = std::distance(First, Last);
-			const size_t Count = Distance / PayloadSize;
-			const size_t Remainder = Distance % PayloadSize;
-
-			std::vector<MapPayload<InIterator, UnaryOp, OutIterator>> Payloads;
-			Payloads.resize(Count);
-
-			// Separate the loops in order to maintain cache locality.
-			for (size_t Iter{ 0 }; Iter < Count; ++Iter)
-			{
-				Payloads[Iter].Input = First + (Iter * PayloadSize);
-				Payloads[Iter].Count = PayloadSize;
-				Payloads[Iter].Operation = Operation;
-				Payloads[Iter].Output = Destination + (Iter * PayloadSize);
-			}
-
-			// Fix the remainder.
-			Payloads[Count - 1].Count += Remainder;
-			
-			for (size_t Iter{ 0 }; Iter < Count; ++Iter)
-			{
-				if constexpr (std::is_same_v<Async, std::true_type>)
+				if constexpr (std::is_same_v<UnaryOp, NoOp>)
 				{
-					InManager.Enqueue(Job{ [](auto Payload)
-						{
-							auto* TypedPayload = reinterpret_cast<MapPayload<InIterator, UnaryOp, OutIterator>*>(Payload);
-
-							std::transform(TypedPayload->Input, TypedPayload->Input + TypedPayload->Count, TypedPayload->Output, TypedPayload->Operation);
-						}, static_cast<void*>(&Payloads[Iter]) });
+					return std::reduce(First, Last, ResultType{}, ReduceOperation);
 				}
 
 				else
 				{
-					InManager.Enqueue(Job{ [](auto Payload)
-						{
-							auto* TypedPayload = reinterpret_cast<MapPayload<InIterator, UnaryOp, OutIterator>*>(Payload);
-
-							std::transform(TypedPayload->Input, TypedPayload->Input + TypedPayload->Count, TypedPayload->Output, TypedPayload->Operation);
-						}, static_cast<void*>(&Payloads[Iter]) }, Dependency);
+					return std::transform_reduce(First, Last, ResultType{}, ReduceOperation, MapOperation);
 				}
 			}
 
-			if constexpr (std::is_same_v<Async, std::false_type>)
+			const auto JobCount = InManager.GetWorkerCount();  // Number of jobs, excluding combiner.
+			const auto PayloadSize = Distance / JobCount;  // Input data chunk size per job.
+			const size_t Remainder = Distance % PayloadSize;  // Left over data chunk for the last job.
+
+			ResultContainerType Results;
+			Results.resize(JobCount);  // Each job produces an intermediate result.
+			std::vector<PayloadType> Payloads;
+			Payloads.resize(JobCount);  // Each job needs a payload as well.
+
+			// Separate the loops in order to maintain cache locality.
+			for (size_t Iter{ 0 }; Iter < JobCount; ++Iter)
 			{
-				Dependency->Wait(0);
+				Payloads[Iter].Input = First + (Iter * PayloadSize);
+				Payloads[Iter].Count = PayloadSize;
+
+				if constexpr (!std::is_same_v<UnaryOp, NoOp>)
+				{
+					Payloads[Iter].MapOperation = MapOperation;
+				}
+
+				Payloads[Iter].ReduceOperation = ReduceOperation;
+				Payloads[Iter].Output = Results.begin() + Iter;
 			}
+
+			// Fix the remainder.
+			Payloads[JobCount - 1].Count += Remainder;
+			
+			for (size_t Iter{ 0 }; Iter < JobCount; ++Iter)
+			{
+				InManager.Enqueue(Job{ [](auto Payload)
+					{
+						auto* TypedPayload = reinterpret_cast<PayloadType*>(Payload);
+						
+						if constexpr (std::is_same_v<UnaryOp, NoOp>)
+						{
+							*TypedPayload->Output = std::reduce(TypedPayload->Input, TypedPayload->Input + TypedPayload->Count, ResultType{}, TypedPayload->ReduceOperation);
+						}
+
+						else
+						{
+							*TypedPayload->Output = std::transform_reduce(TypedPayload->Input, TypedPayload->Input + TypedPayload->Count, ResultType{}, TypedPayload->ReduceOperation, TypedPayload->MapOperation);
+						}
+					}, static_cast<void*>(&Payloads[Iter]) }, Dependency);
+			}
+
+			Dependency->Wait(0);
+
+			return std::accumulate(Results.begin(), Results.end(), ResultType{});
 		}
 	}
 
-	template <typename InIterator, typename OutIterator, typename UnaryOp>
-	inline void ParallelMap(Manager& InManager, InIterator First, InIterator Last, OutIterator Destination, UnaryOp Operation)
+	template <typename Iterator, typename UnaryOp, typename BinaryOp>
+	inline auto ParallelMapReduce(Manager& InManager, Iterator First, Iterator Last, UnaryOp MapOperation, BinaryOp ReduceOperation)
 	{
-		return Detail::ParallelMapInternal<std::false_type>(InManager, First, Last, Destination, Operation);
+		return Detail::ParallelMapReduceInternal(InManager, First, Last, MapOperation, ReduceOperation);
 	}
 
-	template <typename Container, typename OutIterator, typename UnaryOp>
-	inline void ParallelMap(Manager& InManager, Container&& InContainer, OutIterator Destination, UnaryOp Operation)
+	template <typename Container, typename UnaryOp, typename BinaryOp>
+	inline auto ParallelMapReduce(Manager& InManager, Container&& InContainer, UnaryOp MapOperation, BinaryOp ReduceOperation)
 	{
-		return Detail::ParallelMapInternal<std::false_type>(InManager, std::begin(InContainer), std::end(InContainer), Destination, Operation);
+		return Detail::ParallelMapReduceInternal(InManager, std::begin(InContainer), std::end(InContainer), MapOperation, ReduceOperation);
 	}
 
-	template <typename InIterator, typename OutIterator, typename UnaryOp>
-	inline void ParallelMapAsync(Manager& InManager, InIterator First, InIterator Last, OutIterator Destination, UnaryOp Operation)
+	template <typename Iterator, typename BinaryOp>
+	inline auto ParallelReduce(Manager& InManager, Iterator First, Iterator Last, BinaryOp ReduceOperation)
 	{
-		return Detail::ParallelMapInternal<std::true_type>(InManager, First, Last, Destination, Operation);
+		return Detail::ParallelMapReduceInternal(InManager, First, Last, Detail::NoOp{}, ReduceOperation);
 	}
 
-	template <typename Container, typename OutIterator, typename UnaryOp>
-	inline void ParallelMapAsync(Manager& InManager, Container&& InContainer, OutIterator Destination, UnaryOp Operation)
+	template <typename Container, typename BinaryOp>
+	inline auto ParallelReduce(Manager& InManager, Container&& InContainer, BinaryOp ReduceOperation)
 	{
-		return Detail::ParallelMapInternal<std::true_type>(InManager, std::begin(InContainer), std::end(InContainer), Destination, Operation);
+		return Detail::ParallelMapReduceInternal(InManager, std::begin(InContainer), std::end(InContainer), Detail::NoOp{}, ReduceOperation);
 	}
 }

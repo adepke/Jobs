@@ -91,6 +91,8 @@ namespace Jobs
 		template <size_t Size>
 		std::shared_ptr<Counter<>> Enqueue(Job (&InJobs)[Size], const std::string& Group);
 
+		size_t GetWorkerCount() const { return Workers.size(); }
+
 	private:
 		std::optional<JobBuilder> Dequeue(size_t ThreadID);
 
