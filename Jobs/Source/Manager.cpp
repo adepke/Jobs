@@ -73,7 +73,7 @@ namespace Jobs
 
 			if (Continue)
 			{
-				auto NewJob{ std::move(FData->Owner->Dequeue(ThisThreadID)) };	
+				auto NewJob{ std::move(FData->Owner->Dequeue(ThisThreadID)) };
 				if (NewJob)
 				{
 					Continue = false;  // We're satisfied, don't continue.
