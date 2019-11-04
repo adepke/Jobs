@@ -152,7 +152,7 @@ namespace Jobs
 			auto TimeRemaining{ Timeout };  // Used to represent the time budget of the sleep operation. Changes.
 			auto Start{ std::chrono::system_clock::now() };
 
-			// The counter can change multiple times during our allocated timeout period, so we need to loop until we either timeout of successfully met expected value.
+			// The counter can change multiple times during our allocated timeout period, so we need to loop until we either timeout or successfully met expected value.
 			while (true)
 			{
 				if (InsideLock.Wait(&InternalCapture, TimeRemaining))
