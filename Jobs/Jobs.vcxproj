@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClCompile Include="Source\Fiber.cpp" />
     <ClCompile Include="Source\Futex.cpp" />
+    <ClCompile Include="Source\FutexConditionVariable.cpp" />
     <ClCompile Include="Source\JobBuilder.cpp" />
     <ClCompile Include="Source\Logging.cpp" />
     <ClCompile Include="Source\Manager.cpp" />
