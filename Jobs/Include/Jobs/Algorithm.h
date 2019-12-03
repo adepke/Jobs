@@ -15,6 +15,12 @@ namespace Jobs
 	struct AlgorithmPayload;
 
 	template <typename Container>
+	struct AlgorithmPayload<Container>
+	{
+		decltype(std::declval<Container>().begin()) Iterator;
+	};
+
+	template <typename Container>
 	struct AlgorithmPayload<Container, Detail::Empty>
 	{
 		decltype(std::declval<Container>().begin()) Iterator;
@@ -38,7 +44,7 @@ namespace Jobs
 		struct Empty {};
 
 		template <typename Async, typename Iterator, typename CustomData, typename Function>
-		void ParallelForInternal(Manager& InManager, Iterator First, Iterator Last, CustomData&& Data, Function InFunction)
+		void ParallelForInternal(Manager& InManager, Iterator First, Iterator Last, CustomData&& Data, Function&& InFunction)
 		{
 			std::shared_ptr<Counter<>> Dependency;
 
@@ -49,9 +55,10 @@ namespace Jobs
 
 			std::vector<AlgorithmPayload<Detail::FakeContainer<Iterator>, std::remove_reference_t<CustomData>>> Payloads;
 			Payloads.resize(std::distance(First, Last));
+			// #TODO: Maybe we don't actually need this? Look into it.
 			static_assert(std::is_trivially_copyable_v<AlgorithmPayload<Detail::FakeContainer<Iterator>, std::remove_reference_t<CustomData>>>, "AlgorithmPayload must be trivially copyable");
 
-			if constexpr (!std::is_same_v<CustomData, Detail::Empty>)
+			if constexpr (!std::is_same_v<std::remove_reference_t<CustomData>, Detail::Empty>)
 			{
 				std::fill(Payloads.begin(), Payloads.end(), AlgorithmPayload<Detail::FakeContainer<Iterator>, std::remove_reference_t<CustomData>>{ First, Data });
 			}
@@ -82,51 +89,51 @@ namespace Jobs
 	}
 
 	template <typename Iterator, typename CustomData, typename Function>
-	inline void ParallelFor(Manager& InManager, Iterator First, Iterator Last, CustomData&& Data, Function InFunction)
+	inline void ParallelFor(Manager& InManager, Iterator First, Iterator Last, CustomData&& Data, Function&& InFunction)
 	{
-		Detail::ParallelForInternal<std::false_type>(InManager, First, Last, std::forward<CustomData>(Data), InFunction);
+		Detail::ParallelForInternal<std::false_type>(InManager, First, Last, std::forward<CustomData>(Data), std::forward<Function>(InFunction));
 	}
 
 	template <typename Iterator, typename Function>
-	inline void ParallelFor(Manager& InManager, Iterator First, Iterator Last, Function InFunction)
+	inline void ParallelFor(Manager& InManager, Iterator First, Iterator Last, Function&& InFunction)
 	{
-		Detail::ParallelForInternal<std::false_type>(InManager, First, Last, Detail::Empty{}, InFunction);
+		Detail::ParallelForInternal<std::false_type>(InManager, First, Last, Detail::Empty{}, std::forward<Function>(InFunction));
 	}
 
 	template <typename Container, typename CustomData, typename Function>
-	inline void ParallelFor(Manager& InManager, Container&& InContainer, CustomData&& Data, Function InFunction)
+	inline void ParallelFor(Manager& InManager, Container&& InContainer, CustomData&& Data, Function&& InFunction)
 	{
-		Detail::ParallelForInternal<std::false_type>(InManager, std::begin(InContainer), std::end(InContainer), std::forward<CustomData>(Data), InFunction);
+		Detail::ParallelForInternal<std::false_type>(InManager, std::begin(InContainer), std::end(InContainer), std::forward<CustomData>(Data), std::forward<Function>(InFunction));
 	}
 
 	template <typename Container, typename Function>
-	inline void ParallelFor(Manager& InManager, Container&& InContainer, Function InFunction)
+	inline void ParallelFor(Manager& InManager, Container&& InContainer, Function&& InFunction)
 	{
-		Detail::ParallelForInternal<std::false_type>(InManager, std::begin(InContainer), std::end(InContainer), Detail::Empty{}, InFunction);
+		Detail::ParallelForInternal<std::false_type>(InManager, std::begin(InContainer), std::end(InContainer), Detail::Empty{}, std::forward<Function>(InFunction));
 	}
 
 	template <typename Iterator, typename CustomData, typename Function>
-	inline void ParallelForAsync(Manager& InManager, Iterator First, Iterator Last, CustomData&& Data, Function InFunction)
+	inline void ParallelForAsync(Manager& InManager, Iterator First, Iterator Last, CustomData&& Data, Function&& InFunction)
 	{
-		Detail::ParallelForInternal<std::true_type>(InManager, First, Last, std::forward<CustomData>(Data), InFunction);
+		Detail::ParallelForInternal<std::true_type>(InManager, First, Last, std::forward<CustomData>(Data), std::forward<Function>(InFunction));
 	}
 	
 	template <typename Iterator, typename Function>
-	inline void ParallelForAsync(Manager& InManager, Iterator First, Iterator Last, Function InFunction)
+	inline void ParallelForAsync(Manager& InManager, Iterator First, Iterator Last, Function&& InFunction)
 	{
-		Detail::ParallelForInternal<std::true_type>(InManager, First, Last, Detail::Empty{}, InFunction);
+		Detail::ParallelForInternal<std::true_type>(InManager, First, Last, Detail::Empty{}, std::forward<Function>(InFunction));
 	}
 
 	template <typename Container, typename CustomData, typename Function>
-	inline void ParallelForAsync(Manager& InManager, Container&& InContainer, CustomData&& Data, Function InFunction)
+	inline void ParallelForAsync(Manager& InManager, Container&& InContainer, CustomData&& Data, Function&& InFunction)
 	{
-		Detail::ParallelForInternal<std::true_type>(InManager, std::begin(InContainer), std::end(InContainer), std::forward<CustomData>(Data), InFunction);
+		Detail::ParallelForInternal<std::true_type>(InManager, std::begin(InContainer), std::end(InContainer), std::forward<CustomData>(Data), std::forward<Function>(InFunction));
 	}
 
 	template <typename Container, typename Function>
-	inline void ParallelForAsync(Manager& InManager, Container&& InContainer, Function InFunction)
+	inline void ParallelForAsync(Manager& InManager, Container&& InContainer, Function&& InFunction)
 	{
-		Detail::ParallelForInternal<std::true_type>(InManager, std::begin(InContainer), std::end(InContainer), Detail::Empty{}, InFunction);
+		Detail::ParallelForInternal<std::true_type>(InManager, std::begin(InContainer), std::end(InContainer), Detail::Empty{}, std::forward<Function>(InFunction));
 	}
 
 	namespace Detail
@@ -148,12 +155,12 @@ namespace Jobs
 		};
 
 		template <typename Iterator, typename UnaryOp, typename BinaryOp>
-		auto ParallelMapReduceInternal(Manager& InManager, Iterator First, Iterator Last, UnaryOp MapOperation, BinaryOp ReduceOperation)
+		auto ParallelMapReduceInternal(Manager& InManager, Iterator First, Iterator Last, UnaryOp&& MapOperation, BinaryOp&& ReduceOperation)
 		{
 			using IntermediateType = decltype(MapOperation(*First));
 			using ResultType = decltype(ReduceOperation(std::declval<IntermediateType>(), std::declval<IntermediateType>()));
 			using ResultContainerType = std::vector<ResultType>;
-			using PayloadType = MapReducePayload<Iterator, UnaryOp, BinaryOp, decltype(std::declval<ResultContainerType>().begin())>;
+			using PayloadType = MapReducePayload<Iterator, std::remove_reference_t<UnaryOp>, std::remove_reference_t<BinaryOp>, decltype(std::declval<ResultContainerType>().begin())>;
 
 			auto Dependency{ std::make_shared<Counter<>>(0) };
 
@@ -162,14 +169,14 @@ namespace Jobs
 			// If we have a relatively small data set, serial execution is probably faster.
 			if (Distance < 1000)
 			{
-				if constexpr (std::is_same_v<UnaryOp, NoOp>)
+				if constexpr (std::is_same_v<std::remove_reference_t<UnaryOp>, NoOp>)
 				{
-					return std::reduce(First, Last, ResultType{}, ReduceOperation);
+					return std::reduce(First, Last, ResultType{}, std::forward<BinaryOp>(ReduceOperation));
 				}
 
 				else
 				{
-					return std::transform_reduce(First, Last, ResultType{}, ReduceOperation, MapOperation);
+					return std::transform_reduce(First, Last, ResultType{}, std::forward<BinaryOp>(ReduceOperation), std::forward<UnaryOp>(MapOperation));
 				}
 			}
 
@@ -188,7 +195,7 @@ namespace Jobs
 				Payloads[Iter].Input = First + (Iter * PayloadSize);
 				Payloads[Iter].Count = PayloadSize;
 
-				if constexpr (!std::is_same_v<UnaryOp, NoOp>)
+				if constexpr (!std::is_same_v<std::remove_reference_t<UnaryOp>, NoOp>)
 				{
 					Payloads[Iter].MapOperation = MapOperation;
 				}
@@ -206,7 +213,7 @@ namespace Jobs
 					{
 						auto* TypedPayload = reinterpret_cast<PayloadType*>(Payload);
 						
-						if constexpr (std::is_same_v<UnaryOp, NoOp>)
+						if constexpr (std::is_same_v<std::remove_reference_t<UnaryOp>, NoOp>)
 						{
 							*TypedPayload->Output = std::reduce(TypedPayload->Input, TypedPayload->Input + TypedPayload->Count, ResultType{}, TypedPayload->ReduceOperation);
 						}
@@ -225,26 +232,26 @@ namespace Jobs
 	}
 
 	template <typename Iterator, typename UnaryOp, typename BinaryOp>
-	inline auto ParallelMapReduce(Manager& InManager, Iterator First, Iterator Last, UnaryOp MapOperation, BinaryOp ReduceOperation)
+	inline auto ParallelMapReduce(Manager& InManager, Iterator First, Iterator Last, UnaryOp&& MapOperation, BinaryOp&& ReduceOperation)
 	{
-		return Detail::ParallelMapReduceInternal(InManager, First, Last, MapOperation, ReduceOperation);
+		return Detail::ParallelMapReduceInternal(InManager, First, Last, std::forward<UnaryOp>(MapOperation), std::forward<BinaryOp>(ReduceOperation));
 	}
 
 	template <typename Container, typename UnaryOp, typename BinaryOp>
-	inline auto ParallelMapReduce(Manager& InManager, Container&& InContainer, UnaryOp MapOperation, BinaryOp ReduceOperation)
+	inline auto ParallelMapReduce(Manager& InManager, Container&& InContainer, UnaryOp&& MapOperation, BinaryOp&& ReduceOperation)
 	{
-		return Detail::ParallelMapReduceInternal(InManager, std::begin(InContainer), std::end(InContainer), MapOperation, ReduceOperation);
+		return Detail::ParallelMapReduceInternal(InManager, std::begin(InContainer), std::end(InContainer), std::forward<UnaryOp>(MapOperation), std::forward<BinaryOp>(ReduceOperation));
 	}
 
 	template <typename Iterator, typename BinaryOp>
-	inline auto ParallelReduce(Manager& InManager, Iterator First, Iterator Last, BinaryOp ReduceOperation)
+	inline auto ParallelReduce(Manager& InManager, Iterator First, Iterator Last, BinaryOp&& ReduceOperation)
 	{
-		return Detail::ParallelMapReduceInternal(InManager, First, Last, Detail::NoOp{}, ReduceOperation);
+		return Detail::ParallelMapReduceInternal(InManager, First, Last, Detail::NoOp{}, std::forward<BinaryOp>(ReduceOperation));
 	}
 
 	template <typename Container, typename BinaryOp>
-	inline auto ParallelReduce(Manager& InManager, Container&& InContainer, BinaryOp ReduceOperation)
+	inline auto ParallelReduce(Manager& InManager, Container&& InContainer, BinaryOp&& ReduceOperation)
 	{
-		return Detail::ParallelMapReduceInternal(InManager, std::begin(InContainer), std::end(InContainer), Detail::NoOp{}, ReduceOperation);
+		return Detail::ParallelMapReduceInternal(InManager, std::begin(InContainer), std::end(InContainer), Detail::NoOp{}, std::forward<BinaryOp>(ReduceOperation));
 	}
 }
