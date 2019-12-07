@@ -22,8 +22,8 @@ namespace Jobs
 
 		InitializeConditionVariable(reinterpret_cast<CONDITION_VARIABLE*>(ConditionVariable));
 #else
-		*(pthread_mutex_t*)UserSpaceLock = PTHREAD_MUTEX_INITIALIZER;
-		*(pthread_cond_t*)ConditionVariable = PTHREAD_COND_INITIALIZER;
+		*reinterpret_cast<pthread_mutex_t*>(UserSpaceLock) = PTHREAD_MUTEX_INITIALIZER;
+		*reinterpret_cast<pthread_cond_t*>(ConditionVariable) = PTHREAD_COND_INITIALIZER;
 #endif
 	}
 
