@@ -7,7 +7,7 @@
 
 #if _DEBUG || NDEBUG
   // MSVC supports optional macro stream operator after 15.9
-  #if defined(_MSC_VER) && _MSC_VER <= 1916
+  #if /*defined(_MSC_VER) && _MSC_VER <= 1916*/ 1
     #define JOBS_ASSERT(Expression, ...) \
 	do \
 	{ \
