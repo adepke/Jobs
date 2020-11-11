@@ -123,7 +123,7 @@ namespace Jobs
 	template <typename Rep, typename Period>
 	bool Counter<T>::WaitFor(T ExpectedValue, const std::chrono::duration<Rep, Period>& Timeout)
 	{
-		auto Start{ std::chrono::system_clock::now() };
+		const auto Start{ std::chrono::system_clock::now() };
 
 		while (!Evaluate(ExpectedValue))
 		{
@@ -131,7 +131,7 @@ namespace Jobs
 			bool Result{ OutsideLock.WaitFor(Timeout) };
 			OutsideLock.Unlock();
 
-			if (!Result || Start + std::chrono::system_clock::now() >= Timeout)
+			if (!Result || std::chrono::system_clock::now() - Start >= Timeout)
 			{
 				return false;
 			}
