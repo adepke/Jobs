@@ -157,12 +157,6 @@ namespace Jobs
 			}
 		}
 
-
-
-
-
-
-
 		// End of fiber lifetime, we are switching out to the worker thread to perform any final cleanup. We cannot be scheduled again beyond this point.
 		auto& ActiveWorker{ FData->Owner->Workers[FData->Owner->GetThisThreadID()] };
 

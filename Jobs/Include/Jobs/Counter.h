@@ -40,6 +40,8 @@ namespace Jobs
 		Counter& operator++();
 		Counter& operator--();
 
+		Counter& operator+=(T Target);
+
 		// Atomically fetch the current value.
 		const T Get() const;
 
@@ -84,6 +86,16 @@ namespace Jobs
 		OutsideLock.Lock();
 		OutsideLock.NotifyAll();  // Notify under lock to prevent a blind spot signal, which can be fatal.
 		OutsideLock.Unlock();
+
+		return *this;
+	}
+
+	template <typename T>
+	Counter<T>& Counter<T>::operator+=(T Target)
+	{
+		Internal += Target;
+
+		// Don't notify.
 
 		return *this;
 	}
