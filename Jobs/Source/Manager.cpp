@@ -44,9 +44,11 @@ namespace Jobs
 
 		while (FData->Owner->CanContinue())
 		{
+			const auto ThisThreadID = FData->Owner->GetThisThreadID();
+
 			// Cleanup an unfinished state from the previous fiber if we need to.
-			auto& ThisFiber{ FData->Owner->Fibers[FData->Owner->Workers[FData->Owner->GetThisThreadID()].FiberIndex] };
-			const auto PreviousFiberIndex{ ThisFiber.first.PreviousFiberIndex };
+			auto& ThisFiber{ FData->Owner->Fibers[FData->Owner->Workers[ThisThreadID].FiberIndex] };
+			auto PreviousFiberIndex{ ThisFiber.first.PreviousFiberIndex };
 			if (FData->Owner->IsValidID(PreviousFiberIndex))
 			{
 				ThisFiber.first.PreviousFiberIndex = Manager::InvalidID;  // Reset.
@@ -65,7 +67,6 @@ namespace Jobs
 				}
 			}
 
-			const auto ThisThreadID{ FData->Owner->GetThisThreadID() };
 			auto& ThisThread{ FData->Owner->Workers[ThisThreadID] };
 			ThisFiber.first.WaitPoolPriority = !ThisFiber.first.WaitPoolPriority;  // Alternate wait pool priority.
 
@@ -93,15 +94,37 @@ namespace Jobs
 
 								auto NextFiberIndex{ FData->Owner->GetAvailableFiber() };
 								JOBS_ASSERT(FData->Owner->IsValidID(NextFiberIndex), "Failed to retrieve an available fiber from waiting fiber.");
+								auto& NextFiber = FData->Owner->Fibers[NextFiberIndex].first;
 
-								auto& ThisThreadLocal = FData->Owner->Workers[FData->Owner->GetThisThreadID()];  // We might resume on any worker, so we need to update this each iteration.
+								auto& ThisNewThread = FData->Owner->Workers[FData->Owner->GetThisThreadID()];  // We might resume on any worker, so we need to update this each iteration.
 
 								ThisFiber.first.NeedsWaitEnqueue = true;  // We are waiting on a dependency, so make sure we get added to the wait pool.
-								FData->Owner->Fibers[NextFiberIndex].first.PreviousFiberIndex = ThisThreadLocal.FiberIndex;
-								ThisThreadLocal.FiberIndex = NextFiberIndex;  // Update the fiber index.
-								FData->Owner->Fibers[NextFiberIndex].first.Schedule(FData->Owner->Fibers[ThisThread.FiberIndex].first);
+								NextFiber.PreviousFiberIndex = ThisNewThread.FiberIndex;
+								ThisNewThread.FiberIndex = NextFiberIndex;  // Update the fiber index.
+								NextFiber.Schedule(FData->Owner->Fibers[NextFiber.PreviousFiberIndex].first);
 
 								JOBS_LOG(LogLevel::Log, "Job resumed from wait pool, re-evaluating dependencies.");
+
+								// We just returned from a fiber, so we need to make sure to fix up it's state. We can't wait until the main loop begins again
+								// because if any of the dependencies still hold, we lose that information about the previous fiber, causing a leak.
+
+								PreviousFiberIndex = ThisFiber.first.PreviousFiberIndex;
+								if (FData->Owner->IsValidID(PreviousFiberIndex))
+								{
+									ThisFiber.first.PreviousFiberIndex = Manager::InvalidID;  // Reset. Skipping this will cause a double-cleanup on the next loop beginning if the dependency doesn't hold.
+									auto& PreviousFiber{ FData->Owner->Fibers[PreviousFiberIndex] };
+
+									if (PreviousFiber.first.NeedsWaitEnqueue)
+									{
+										PreviousFiber.first.NeedsWaitEnqueue = false;  // Reset.
+										FData->Owner->WaitingFibers.enqueue(PreviousFiberIndex);
+									}
+
+									else
+									{
+										PreviousFiber.second.store(true);  // #TODO: Memory order.
+									}
+								}
 
 								// Next we can re-evaluate the dependencies.
 								RequiresEvaluation = true;
