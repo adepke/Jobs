@@ -3,23 +3,8 @@ workspace "Jobs"
 	platforms { "Win64" }
 	configurations { "Debug", "Release" }
 	
-	EnableLogging = true
+	EnableLogging = false
 	EnableProfiling = true
-		
-project "Jobs"
-	language "C++"
-	cppdialect "C++17"
-	kind "StaticLib"
-	
-	location "Build/Generated"
-	buildlog "Build/Logs/BuildLog.log"
-	basedir "../../"
-	objdir "Build/Intermediate/%{cfg.platform}_%{cfg.buildcfg}"
-	targetdir "Build/Bin/%{cfg.platform}_%{cfg.buildcfg}"
-	
-	targetname "Jobs"
-	
-	includedirs { "Jobs/Include", "Jobs/Source" }
 	
 	flags { "NoPCH", "MultiProcessorCompile" }
 	clr "Off"
@@ -48,6 +33,21 @@ project "Jobs"
 		exceptionhandling "Off"
 		
 	filter {}
+		
+project "Jobs"
+	language "C++"
+	cppdialect "C++17"
+	kind "StaticLib"
+	
+	location "Build/Generated"
+	buildlog "Build/Logs/Jobs.log"
+	basedir "../../"
+	objdir "Build/Intermediate/%{cfg.platform}_%{cfg.buildcfg}"
+	targetdir "Build/Bin/%{cfg.platform}_%{cfg.buildcfg}"
+	
+	targetname "Jobs"
+	
+	includedirs { "Jobs/Include" }
 	
 	if EnableLogging then
 		defines { "JOBS_ENABLE_LOGGING=1" }
@@ -57,6 +57,7 @@ project "Jobs"
 	
 	if EnableProfiling then
 		defines { "JOBS_ENABLE_PROFILING=1", "TRACY_ENABLE" }
+		includedirs { "tracy" }
 	else
 		defines { "JOBS_ENABLE_PROFILING=0" }
 	end
@@ -64,3 +65,26 @@ project "Jobs"
 	files { "Jobs/Include/Jobs/*.h", "Jobs/Source/*.cpp" }
 	
 	links { "Synchronization" }
+	
+if EnableProfiling then
+	project "Profiling"
+		language "C++"
+		cppdialect "C++17"
+		kind "ConsoleApp"
+		
+		location "Build/Generated"
+		buildlog "Build/Logs/Profiling.log"
+		basedir "../../"
+		objdir "Build/Intermediate/%{cfg.platform}_%{cfg.buildcfg}"
+		targetdir "Build/Bin/%{cfg.platform}_%{cfg.buildcfg}"
+	
+		targetname "Profiling"
+	
+		includedirs { "Jobs/Include", "tracy" }
+		
+		defines { "TRACY_ENABLE" }
+		
+		files { "Examples/*.cpp" }
+		
+		links { "Jobs" }
+end
