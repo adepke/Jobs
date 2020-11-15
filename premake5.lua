@@ -4,7 +4,7 @@ workspace "Jobs"
 	configurations { "Debug", "Release" }
 	
 	EnableLogging = false
-	EnableProfiling = true
+	EnableProfiling = false
 	
 	flags { "NoPCH", "MultiProcessorCompile" }
 	clr "Off"
@@ -40,7 +40,7 @@ project "Jobs"
 	kind "StaticLib"
 	
 	location "Build/Generated"
-	buildlog "Build/Logs/Jobs.log"
+	buildlog "Build/Logs/Build.log"
 	basedir "../../"
 	objdir "Build/Intermediate/%{cfg.platform}_%{cfg.buildcfg}"
 	targetdir "Build/Bin/%{cfg.platform}_%{cfg.buildcfg}"
@@ -86,5 +86,10 @@ if EnableProfiling then
 		
 		files { "Examples/*.cpp" }
 		
-		links { "Jobs" }
+		libdirs "Build/Bin/*"
+		libdirs "Build/TracyClient/Bin/*"
+		
+		links { "Jobs", "Tracy" }
+		
+		include "tracy"
 end
