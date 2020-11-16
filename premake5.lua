@@ -1,10 +1,34 @@
+newoption {
+	trigger = "logging",
+	description = "Enables internal logging for debugging"
+}
+
+newoption {
+	trigger = "profiling",
+	description = "Enables internal profiling utilities and Tracy zone emission. Also creates Tracy projects and a profiling project from the Examples/ directory."
+}
+
+EnableLogging = false
+EnableProfiling = false
+
+if _OPTIONS["logging"] then
+	EnableLogging = true
+end
+
+if _OPTIONS["profiling"] then
+	EnableProfiling = true
+end
+
 workspace "Jobs"
 	architecture "x86_64"
 	platforms { "Win64" }
 	configurations { "Debug", "Release" }
 	
-	EnableLogging = false
-	EnableProfiling = false
+	if EnableProfiling then
+		startproject "Profiling"
+	else
+		startproject "Jobs"
+	end
 	
 	flags { "NoPCH", "MultiProcessorCompile" }
 	clr "Off"
