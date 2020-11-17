@@ -24,7 +24,7 @@
 
 namespace Jobs
 {
-	Worker::Worker(Manager* const InOwner, size_t InID, EntryType Entry) : Owner(InOwner), ID(InID)
+	Worker::Worker(Manager* InOwner, size_t InID, EntryType Entry) : Owner(InOwner), ID(InID)
 	{
 		JOBS_SCOPED_STAT("Worker Creation");
 
@@ -32,14 +32,14 @@ namespace Jobs
 
 		JOBS_ASSERT(InOwner, "Worker constructor needs a valid owner.");
 
-		ThreadHandle = std::thread{ [this, Entry](auto Arg)
+		ThreadHandle = std::thread{ [this, Entry](auto* Arg)
 		{
 			ThreadFiber = Fiber::FromThisThread(nullptr);
 
 			Ready.store(true, std::memory_order_seq_cst);  // We saved the thread fiber pointer, the worker can now move us.
 
 			Entry(Arg);  // We will never return here.
-		}, InOwner };
+		}, Owner };
 
 #if PLATFORM_WINDOWS
 		SetThreadAffinityMask(ThreadHandle.native_handle(), static_cast<size_t>(1) << InID);

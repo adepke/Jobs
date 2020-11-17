@@ -15,10 +15,10 @@ namespace Jobs
 	class Job
 	{
 		friend class Manager;
-		friend void ManagerFiberEntry(void* Data);
+		friend void ManagerFiberEntry(void*);
 
 	public:
-		using EntryType = void(*)(void* Data);
+		using EntryType = void(*)(Manager*, void*);
 		EntryType Entry = nullptr;
 
 	protected:
@@ -45,11 +45,11 @@ namespace Jobs
 			Dependencies.push_back({ Handle, ExpectedValue });
 		}
 
-		void operator()()
+		void operator()(Manager* Owner)
 		{
 			JOBS_ASSERT(Entry, "Attempted to execute empty job.");
 
-			return Entry(Data);
+			return Entry(Owner, Data);
 		}
 	};
 }

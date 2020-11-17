@@ -9,7 +9,7 @@ namespace Jobs
 	void JobBuilder::operator()(Manager* InOwner)
 	{
 		// Execute our actual job before anything else, cache will probably be wiped out by the time we're back.
-		(*Entry)(Data);
+		(*Entry)(InOwner, Data);
 
 		for (size_t Iter{ 0 }; Iter < JobTree->size(); ++Iter)
 		{
@@ -27,7 +27,7 @@ namespace Jobs
 		auto LockedCounter{ std::prev(JobTree->end())->second };  // We hold the heap resource keeping this counter alive, it will persist until the cleanup job runs.
 		LockedCounter->operator--();  // We queued up the jobs so the counter is guaranteed to be ready.
 
-		auto CleanupJob{ Job{ [](auto Payload)
+		auto CleanupJob{ Job{ [](auto* Owner, auto* Payload)
 		{
 			delete reinterpret_cast<TreeType*>(Payload);
 		}, static_cast<void*>(JobTree) } };

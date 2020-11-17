@@ -16,7 +16,7 @@ namespace Jobs
 
 	class Worker
 	{
-		using EntryType = void(*)(Manager* const);
+		using EntryType = void(*)(Manager*);
 
 	private:
 		std::atomic_bool Ready;

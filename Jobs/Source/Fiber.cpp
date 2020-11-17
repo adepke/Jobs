@@ -25,12 +25,7 @@
 
 namespace Jobs
 {
-	void FiberEntry(void* Data)
-	{
-		JOBS_LOG(LogLevel::Log, "Fiber entry.");
-	}
-
-	Fiber::Fiber(size_t StackSize, decltype(&FiberEntry) Entry, void* Arg) : Data(Arg)
+	Fiber::Fiber(size_t StackSize, EntryType Entry, Manager* InOwner) : Owner(InOwner)
 	{
 		JOBS_SCOPED_STAT("Fiber Creation");
 
@@ -38,7 +33,7 @@ namespace Jobs
 		JOBS_ASSERT(StackSize > 0, "Stack size must be greater than 0.");
 
 #if PLATFORM_WINDOWS
-		Context = CreateFiber(StackSize, Entry, Arg);
+		Context = CreateFiber(StackSize, Entry, reinterpret_cast<void*>(Owner));
 #else
 		ucontext_t* NewContext = new ucontext_t{};
 		JOBS_ASSERT(getcontext(NewContext) == 0, "Error occurred in getcontext().");
@@ -103,7 +98,7 @@ namespace Jobs
 	void Fiber::Swap(Fiber& Other) noexcept
 	{
 		std::swap(Context, Other.Context);
-		std::swap(Data, Other.Data);
+		std::swap(Owner, Other.Owner);
 	}
 
 	Fiber* Fiber::FromThisThread(void* Arg)

@@ -59,60 +59,60 @@ int main()
 	// Forwards optional internal logging information for debug builds. Also handles our own logging info.
 	LogManager::Get().SetOutputDevice(std::cout);
 
-	Job taskA{ [](auto) {
+	Job taskA{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task A");
 		JOBS_LOG(LogLevel::Log, "A");
 		DoWork(2);
 	} };
 
-	Job taskB{ [](auto) {
+	Job taskB{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task B");
 		JOBS_LOG(LogLevel::Log, "B");
 		DoWork(3);
 	} };
 
-	Job taskC{ [](auto) {
+	Job taskC{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task C");
 		JOBS_LOG(LogLevel::Log, "C");
 		DoWork(5);
 	} };
 
-	Job taskD{ [](auto) {
+	Job taskD{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task D");
 		JOBS_LOG(LogLevel::Log, "D");
 		DoWork(1);
 	} };
 	taskD.AddDependency(counterA);
 
-	Job taskE{ [](auto) {
+	Job taskE{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task E");
 		JOBS_LOG(LogLevel::Log, "E");
 		DoWork(7);
 	} };
 	taskE.AddDependency(counterA);
 
-	Job taskF{ [](auto) {
+	Job taskF{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task F");
 		JOBS_LOG(LogLevel::Log, "F");
 		DoWork(3);
 	} };
 	taskF.AddDependency(counterB);
 
-	Job taskG{ [](auto) {
+	Job taskG{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task G");
 		JOBS_LOG(LogLevel::Log, "G");
 		DoWork(5);
 	} };
 	taskG.AddDependency(counterD);
 
-	Job taskH{ [](auto) {
+	Job taskH{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task H");
 		JOBS_LOG(LogLevel::Log, "H");
 		DoWork(1);
 	} };
 	taskH.AddDependency(counterD);
 
-	Job taskI{ [](auto) {
+	Job taskI{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task I");
 		JOBS_LOG(LogLevel::Log, "I");
 		DoWork(3);
@@ -120,7 +120,7 @@ int main()
 	taskI.AddDependency(counterD);
 	taskI.AddDependency(counterE);
 
-	Job taskJ{ [](auto) {
+	Job taskJ{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task J");
 		JOBS_LOG(LogLevel::Log, "J");
 		DoWork(2);
@@ -129,7 +129,7 @@ int main()
 	taskJ.AddDependency(counterH);
 	taskJ.AddDependency(counterI);
 
-	Job taskK{ [](auto) {
+	Job taskK{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task K");
 		JOBS_LOG(LogLevel::Log, "K");
 		DoWork(5);
@@ -137,7 +137,7 @@ int main()
 	taskK.AddDependency(counterE);
 	taskK.AddDependency(counterF);
 
-	Job taskL{ [](auto) {
+	Job taskL{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task L");
 		JOBS_LOG(LogLevel::Log, "L");
 		DoWork(3);
@@ -145,7 +145,7 @@ int main()
 	taskL.AddDependency(counterK);
 	taskL.AddDependency(counterC);
 
-	Job taskM{ [](auto) {
+	Job taskM{ [](auto, auto) {
 		JOBS_SCOPED_STAT("Task M");
 		JOBS_LOG(LogLevel::Log, "M");
 		DoWork(1);

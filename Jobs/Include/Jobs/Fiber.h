@@ -9,13 +9,15 @@
 
 namespace Jobs
 {
-	void FiberEntry(void* Data);
+	class Manager;
 
 	class Fiber
 	{
+		using EntryType = void(*)(void*);
+
 	private:
 		void* Context = nullptr;
-		void* Data = nullptr;
+		Manager* Owner = nullptr;
 
 	public:
 		bool WaitPoolPriority = false;  // Used for alternating wait pool. Does not need to be atomic.
@@ -24,7 +26,7 @@ namespace Jobs
 
 	public:
 		Fiber() = default;  // Used for converting a thread to a fiber.
-		Fiber(size_t StackSize, decltype(&FiberEntry) Entry, void* Arg);
+		Fiber(size_t StackSize, EntryType Entry, Manager* InOwner);
 		Fiber(const Fiber&) = delete;
 		Fiber(Fiber&& Other) noexcept;
 		~Fiber();

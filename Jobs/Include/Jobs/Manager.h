@@ -21,28 +21,17 @@
 
 namespace Jobs
 {
-	// Shared common data.
-	struct FiberData
-	{
-		Manager* const Owner;
-
-		FiberData(Manager* const InOwner) : Owner(InOwner) {};
-	};
-
 	class Manager
 	{
 		friend class Worker;
-		friend void ManagerWorkerEntry(Manager* const Owner);
-		friend void ManagerFiberEntry(void* Data);
+		friend void ManagerWorkerEntry(Manager*);
+		friend void ManagerFiberEntry(void*);
 
 		// #TODO: Move these into template traits.
 		static constexpr size_t FiberCount = 64;
 		static constexpr size_t FiberStackSize = 1024 * 1024;  // 1 MB
 
 	private:
-		// Shared fiber storage.
-		std::unique_ptr<FiberData> Data;
-
 		std::vector<Worker> Workers;
 		std::array<std::pair<Fiber, std::atomic_bool>, FiberCount> Fibers;  // Pool of fibers paired to an availability flag.
 		moodycamel::ConcurrentQueue<size_t> WaitingFibers;  // Queue of fiber indices that are waiting for some dependency or scheduled a waiting fiber.
