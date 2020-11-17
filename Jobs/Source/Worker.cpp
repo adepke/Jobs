@@ -26,6 +26,8 @@ namespace Jobs
 {
 	Worker::Worker(Manager* const InOwner, size_t InID, EntryType Entry) : Owner(InOwner), ID(InID)
 	{
+		JOBS_SCOPED_STAT("Worker Creation");
+
 		JOBS_LOG(LogLevel::Log, "Building thread.");
 
 		JOBS_ASSERT(InOwner, "Worker constructor needs a valid owner.");

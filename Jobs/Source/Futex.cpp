@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2020 Andrew Depke
 
 #include <Jobs/Futex.h>
+#include <Jobs/Profiling.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #define PLATFORM_WINDOWS 1
@@ -25,6 +26,8 @@ namespace Jobs
 {
 	bool Futex::Wait(void* CompareAddress, size_t Size, uint64_t TimeoutNs) const
 	{
+		JOBS_SCOPED_STAT("Futex Wait");
+
 #if PLATFORM_WINDOWS
 		return WaitOnAddress(Address, CompareAddress, Size, static_cast<DWORD>(TimeoutNs > 0 ? (TimeoutNs >= 1e6 ? TimeoutNs : 1e6) / 1e6 : INFINITE));
 #else
@@ -38,6 +41,8 @@ namespace Jobs
 
 	void Futex::NotifyOne() const
 	{
+		JOBS_SCOPED_STAT("Futex Notify One");
+
 		if (Address)
 		{
 #if PLATFORM_WINDOWS
@@ -50,6 +55,8 @@ namespace Jobs
 
 	void Futex::NotifyAll() const
 	{
+		JOBS_SCOPED_STAT("Futex Notify All");
+
 		if (Address)
 		{
 #if PLATFORM_WINDOWS

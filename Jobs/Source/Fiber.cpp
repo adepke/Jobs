@@ -4,6 +4,7 @@
 
 #include <Jobs/Logging.h>
 #include <Jobs/Assert.h>
+#include <Jobs/Profiling.h>
 
 #include <utility>  // std::swap
 
@@ -31,6 +32,8 @@ namespace Jobs
 
 	Fiber::Fiber(size_t StackSize, decltype(&FiberEntry) Entry, void* Arg) : Data(Arg)
 	{
+		JOBS_SCOPED_STAT("Fiber Creation");
+
 		JOBS_LOG(LogLevel::Log, "Building fiber.");
 		JOBS_ASSERT(StackSize > 0, "Stack size must be greater than 0.");
 
@@ -83,6 +86,8 @@ namespace Jobs
 
 	void Fiber::Schedule(const Fiber& From)
 	{
+		JOBS_SCOPED_STAT("Fiber Schedule");
+
 		JOBS_LOG(LogLevel::Log, "Scheduling fiber.");
 
 #if PLATFORM_WINDOWS
@@ -103,6 +108,8 @@ namespace Jobs
 
 	Fiber* Fiber::FromThisThread(void* Arg)
 	{
+		JOBS_SCOPED_STAT("Fiber From Thread");
+
 		auto* Result{ new Fiber{} };
 
 #if PLATFORM_WINDOWS

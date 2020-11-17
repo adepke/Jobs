@@ -5,6 +5,7 @@
 #include <Jobs/Worker.h>
 #include <Jobs/Fiber.h>
 #include <Jobs/Counter.h>
+#include <Jobs/Profiling.h>
 
 #include <vector>  // std::vector
 #include <array>  // std::array
@@ -107,6 +108,8 @@ namespace Jobs
 	template <typename U>
 	void Manager::EnqueueInternal(U&& InJob)
 	{
+		JOBS_SCOPED_STAT("Enqueue Internal");
+
 		// If we're a job builder, we need to increment the counter before leaving Enqueue.
 		if (InJob.Stream)
 		{
@@ -142,6 +145,8 @@ namespace Jobs
 		else
 		{
 			EnqueueInternal(std::forward<JobBuilder>(static_cast<JobBuilder&&>(InJob)));
+
+			JOBS_SCOPED_STAT("Enqueue Notify");
 
 			// #NOTE: Safeguarding the notify can destroy performance in high enqueue situations. This leaves a blind spot potential,
 			// but the risk is worth it. Even if a blind spot signal happens, the worker will just sleep until a new enqueue arrives, where it can recover.
