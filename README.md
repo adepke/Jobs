@@ -6,6 +6,7 @@
 - Lightweight dependencies with minimal switching overhead
 - Managed dependency memory
 - Unlimited dependencies per job, allowing for complex graphs
+- Fiber-aware mutexes that allow mid-execution interruption
 - High level algorithms to abstract individual job creation and management
 
 ## Motivation
