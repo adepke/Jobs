@@ -2,6 +2,7 @@
 
 #include <Jobs/Manager.h>
 
+#include <Jobs/FiberMutex.h>
 #include <Jobs/Assert.h>
 #include <Jobs/Logging.h>
 
@@ -155,15 +156,30 @@ namespace Jobs
 				size_t WaitingFiberIndex = Manager::InvalidID;
 				if (Owner->WaitingFibers.try_dequeue(WaitingFiberIndex))
 				{
-					Continue = false;  // Satisfied, don't continue.
-
 					auto& WaitingFiber{ Owner->Fibers[WaitingFiberIndex].first };
 
 					JOBS_ASSERT(!ThisFiber.first.NeedsWaitEnqueue, "Logic error, should never request an enqueue if we pulled down a fiber through a dequeue.");
 
-					WaitingFiber.PreviousFiberIndex = ThisThread.FiberIndex;
-					ThisThread.FiberIndex = WaitingFiberIndex;
-					WaitingFiber.Schedule(ThisFiber.first);  // Schedule the waiting fiber. It might be a long time before we resume, if ever.
+					// Before we schedule the waiting fiber, we need to check if it's waiting on a mutex.
+					if (WaitingFiber.Mutex && !WaitingFiber.Mutex->try_lock())
+					{
+						JOBS_LOG(LogLevel::Log, "Waiting fiber failed to acquire mutex.");
+
+						// Move the waiting fiber to the back of the wait queue. We don't need to mark either fiber as needing a wait enqueue
+						// since we never left this fiber.
+						Owner->WaitingFibers.enqueue(WaitingFiberIndex);
+
+						// Fall through and continue on this fiber.
+					}
+
+					else
+					{
+						Continue = false;  // Satisfied, don't continue.
+
+						WaitingFiber.PreviousFiberIndex = ThisThread.FiberIndex;
+						ThisThread.FiberIndex = WaitingFiberIndex;
+						WaitingFiber.Schedule(ThisFiber.first);  // Schedule the waiting fiber. It might be a long time before we resume, if ever.
+					}
 				}
 			}
 

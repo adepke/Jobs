@@ -24,6 +24,7 @@ namespace Jobs
 	class Manager
 	{
 		friend class Worker;
+		friend class FiberMutex;
 		friend void ManagerWorkerEntry(Manager*);
 		friend void ManagerFiberEntry(void*);
 

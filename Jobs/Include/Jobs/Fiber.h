@@ -10,6 +10,7 @@
 namespace Jobs
 {
 	class Manager;
+	class FiberMutex;
 
 	class Fiber
 	{
@@ -23,6 +24,8 @@ namespace Jobs
 		bool WaitPoolPriority = false;  // Used for alternating wait pool. Does not need to be atomic.
 		size_t PreviousFiberIndex = std::numeric_limits<size_t>::max();  // Used to track the fiber that scheduled us.
 		bool NeedsWaitEnqueue = false;  // Used to mark if we need to have availability restored or added to the wait pool.
+
+		FiberMutex* Mutex = nullptr;  // Used to determine if we're waiting on a mutex.
 
 	public:
 		Fiber() = default;  // Used for converting a thread to a fiber.
