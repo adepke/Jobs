@@ -108,6 +108,12 @@ if EnableProfiling then
 		
 		defines { "TRACY_ENABLE" }
 		
+		if EnableLogging then
+			defines { "JOBS_ENABLE_LOGGING=1" }
+		else
+			defines { "JOBS_ENABLE_LOGGING=0" }
+		end
+		
 		files { "Examples/*.cpp" }
 		
 		libdirs "Build/Bin/*"
