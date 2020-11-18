@@ -1,0 +1,6 @@
+- Implement fiber support in Tracy
+- Unify counters and mutexes, allow for jobs to wait on specific counter values
+- Blur the line between jobs and the main thread
+- Allow for worker pinning when enqueuing jobs, guaranteeing that it will only execute on the worker which enqueued it
+- Explore a more user-friendly syntax with job payloads, try and find a way to have typed lambda arguments
+- Add "safemode" which exploits hard locks for internal debugging, exposed via build option that is off by default
