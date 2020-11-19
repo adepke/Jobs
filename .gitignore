@@ -3,6 +3,9 @@
 *.vcxproj
 *.vcxproj.filters
 
+# Makefile
+Makefile
+
 # User-specific files
 *.suo
 *.user
