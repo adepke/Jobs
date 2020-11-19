@@ -4,3 +4,5 @@
 - Allow for worker pinning when enqueuing jobs, guaranteeing that it will only execute on the worker which enqueued it
 - Explore a more user-friendly syntax with job payloads, try and find a way to have typed lambda arguments
 - Add "safemode" which exploits hard locks for internal debugging, exposed via build option that is off by default
+- Implement Linux support via boost.context
+- Add guard pages above and below fiber stacks in safemode
