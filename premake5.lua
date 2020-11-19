@@ -109,7 +109,7 @@ project "Jobs"
 	end
 	
 	filter { "system:windows" }
-		buildoptions "/GT"  -- Enable fiber-safe optimizations.
+		buildoptions "/GT"  -- Enable fiber-safe optimizations, prevents TLS array address from being cached since a fiber can be resumed on any thread.
 		
 	filter {}
 	
