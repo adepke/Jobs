@@ -20,9 +20,18 @@ if _OPTIONS["profiling"] then
 end
 
 workspace "Jobs"
-	architecture "x86_64"
-	platforms { "Win64" }
+	platforms { "Static64" }
 	configurations { "Debug", "Release" }
+	
+	filter { "platforms:*64" }
+		architecture "x86_64"
+		
+	filter {}
+	
+	filter { "system:windows" }
+		systemversion "latest"
+		
+	filter {}
 	
 	if EnableProfiling then
 		startproject "Profiling"
@@ -36,10 +45,6 @@ workspace "Jobs"
 	characterset "Unicode"
 	staticruntime "Off"
 	warnings "Extra"
-	
-	defines { "WIN32", "_WIN32" }
-	system "Windows"
-	systemversion "latest"
 	
 	filter { "configurations:Debug" }
 		defines { "DEBUG", "_DEBUG" }
@@ -71,6 +76,14 @@ project "Jobs"
 	
 	targetname "Jobs"
 	
+	filter { "system:windows" }
+		defines { "JOBS_PLATFORM_WINDOWS=1", "JOBS_PLATFORM_POSIX=0" }
+		
+	filter { "system:linux" }
+		defines { "JOBS_PLATFORM_WINDOWS=0", "JOBS_PLATFORM_POSIX=1" }
+		
+	filter {}
+	
 	includedirs { "Jobs/Include" }
 	
 	if EnableLogging then
@@ -88,7 +101,25 @@ project "Jobs"
 	
 	files { "Jobs/Include/Jobs/*.h", "Jobs/Source/*.cpp" }
 	
-	links { "Synchronization" }
+	if EnableProfiling then
+		filter { "system:windows", "configurations:Debug" }
+			buildoptions "/Zi"  -- Disable edit and continue, this causes __LINE__ to not evaluate as a constant, which Tracy needs.
+			
+		filter {}
+	end
+	
+	filter { "system:windows" }
+		buildoptions "/GT"  -- Enable fiber-safe optimizations.
+		
+	filter {}
+	
+	filter { "system:windows" }
+		links { "Synchronization" }
+		
+	filter { "system:linux" }
+		links { "pthread" }
+	
+	filter {}
 	
 if EnableProfiling then
 	project "Profiling"
