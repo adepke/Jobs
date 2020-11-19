@@ -8,19 +8,12 @@
 
 #include <utility>  // std::swap
 
-#if defined(_WIN32) || defined(_WIN64)
-#define PLATFORM_WINDOWS 1
-#include <Jobs/WindowsMinimal.h>
-#else
-#define PLATFORM_POSIX 1
-#include <ucontext.h>
+#if JOBS_PLATFORM_WINDOWS
+  #include <Jobs/WindowsMinimal.h>
 #endif
-
-#ifndef PLATFORM_WINDOWS
-#define PLATFORM_WINDOWS 0
-#endif
-#ifndef PLATFORM_POSIX
-#define PLATFORM_POSIX 0
+#if JOBS_PLATFORM_POSIX
+  #include <pthread.h>
+  #include <ucontext.h>
 #endif
 
 namespace Jobs
@@ -32,7 +25,7 @@ namespace Jobs
 		JOBS_LOG(LogLevel::Log, "Building fiber.");
 		JOBS_ASSERT(StackSize > 0, "Stack size must be greater than 0.");
 
-#if PLATFORM_WINDOWS
+#if JOBS_PLATFORM_WINDOWS
 		Context = CreateFiber(StackSize, Entry, reinterpret_cast<void*>(Owner));
 #else
 		ucontext_t* NewContext = new ucontext_t{};
@@ -58,7 +51,7 @@ namespace Jobs
 
 	Fiber::~Fiber()
 	{
-#if PLATFORM_WINDOWS
+#if JOBS_PLATFORM_WINDOWS
 		if (Context)
 		{
 			// We only want to log when an actual fiber was destroyed, not the shell of a fiber that was moved.
@@ -67,8 +60,8 @@ namespace Jobs
 			DeleteFiber(Context);
 		}
 #else
-		delete[] Context->uc_stack.ss_sp;
-		delete Context;
+		delete[] static_cast<ucontext_t*>(Context)->uc_stack.ss_sp;
+		delete static_cast<ucontext_t*>(Context);
 #endif
 	}
 
@@ -85,7 +78,7 @@ namespace Jobs
 
 		JOBS_LOG(LogLevel::Log, "Scheduling fiber.");
 
-#if PLATFORM_WINDOWS
+#if JOBS_PLATFORM_WINDOWS
 		// #TODO Should this be windows only? Explore behavior of posix fibers swapping to themselves.
 		JOBS_ASSERT(Context != GetCurrentFiber(), "Fibers scheduling themselves causes unpredictable issues.");
 
@@ -107,7 +100,7 @@ namespace Jobs
 
 		auto* Result{ new Fiber{} };
 
-#if PLATFORM_WINDOWS
+#if JOBS_PLATFORM_WINDOWS
 		Result->Context = ConvertThreadToFiber(Arg);
 #else
 		Result->Context = new ucontext_t{};

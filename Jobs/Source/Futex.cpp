@@ -1,25 +1,18 @@
 // Copyright (c) 2019-2020 Andrew Depke
 
 #include <Jobs/Futex.h>
+#include <Jobs/Platform.h>
 #include <Jobs/Profiling.h>
 
-#if defined(_WIN32) || defined(_WIN64)
-#define PLATFORM_WINDOWS 1
-#include <Jobs/WindowsMinimal.h>
-#else
-#define PLATFORM_POSIX 1
-#include <unistd.h>
-#include <sys/syscall.h>
-#include <linux/futex.h>
-#include <sys/time.h>
-#include <limits>
+#if JOBS_PLATFORM_WINDOWS
+  #include <Jobs/WindowsMinimal.h>
 #endif
-
-#ifndef PLATFORM_WINDOWS
-#define PLATFORM_WINDOWS 0
-#endif
-#ifndef PLATFORM_POSIX
-#define PLATFORM_POSIX 0
+#if JOBS_PLATFORM_POSIX
+  #include <unistd.h>
+  #include <sys/syscall.h>
+  #include <linux/futex.h>
+  #include <sys/time.h>
+  #include <limits>
 #endif
 
 namespace Jobs
@@ -28,7 +21,7 @@ namespace Jobs
 	{
 		JOBS_SCOPED_STAT("Futex Wait");
 
-#if PLATFORM_WINDOWS
+#if JOBS_PLATFORM_WINDOWS
 		return WaitOnAddress(Address, CompareAddress, Size, static_cast<DWORD>(TimeoutNs > 0 ? (TimeoutNs >= 1e6 ? TimeoutNs : 1e6) / 1e6 : INFINITE));
 #else
 		timespec Timeout;
@@ -45,7 +38,7 @@ namespace Jobs
 
 		if (Address)
 		{
-#if PLATFORM_WINDOWS
+#if JOBS_PLATFORM_WINDOWS
 			WakeByAddressSingle(Address);
 #else
 			syscall(SYS_futex, Address, FUTEX_WAKE, 1);
@@ -59,7 +52,7 @@ namespace Jobs
 
 		if (Address)
 		{
-#if PLATFORM_WINDOWS
+#if JOBS_PLATFORM_WINDOWS
 			WakeByAddressAll(Address);
 #else
 			syscall(SYS_futex, Address, FUTEX_WAKE, std::numeric_limits<int>::max());

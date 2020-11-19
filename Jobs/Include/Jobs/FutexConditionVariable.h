@@ -2,32 +2,26 @@
 
 #pragma once
 
+#include <Jobs/Platform.h>
+
 namespace Jobs
 {
-#if defined(_WIN32) || defined(_WIN64)
-#define PLATFORM_WINDOWS 1
+#if JOBS_PLATFORM_WINDOWS
 	constexpr auto SizeOfUserSpaceLock = 40;
 	constexpr auto SizeOfConditionVariable = 8;
-#else
-#define PLATFORM_POSIX 1
+#endif
+#if JOBS_PLATFORM_POSIX
 	constexpr auto SizeOfUserSpaceLock = 40;
 	constexpr auto SizeOfConditionVariable = 48;
 #endif
 }
-
-#ifndef PLATFORM_WINDOWS
-#define PLATFORM_WINDOWS 0
-#endif
-#ifndef PLATFORM_POSIX
-#define PLATFORM_POSIX 0
-#endif
 
 namespace Jobs
 {
 	class FutexConditionVariable
 	{
 	private:
-		// Opaque housing.
+		// Opaque storage.
 		unsigned char UserSpaceLock[SizeOfUserSpaceLock];
 		unsigned char ConditionVariable[SizeOfConditionVariable];
 

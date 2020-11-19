@@ -7,19 +7,11 @@
 #include <Jobs/Assert.h>
 #include <Jobs/Fiber.h>
 
-#if defined(_WIN32) || defined(_WIN64)
-#define PLATFORM_WINDOWS 1
-#include <Jobs/WindowsMinimal.h>
-#else
-#define PLATFORM_POSIX 1
-#include <pthread.h>
+#if JOBS_PLATFORM_WINDOWS
+  #include <Jobs/WindowsMinimal.h>
 #endif
-
-#ifndef PLATFORM_WINDOWS
-#define PLATFORM_WINDOWS 0
-#endif
-#ifndef PLATFORM_POSIX
-#define PLATFORM_POSIX 0
+#if JOBS_PLATFORM_POSIX
+  #include <pthread.h>
 #endif
 
 namespace Jobs
@@ -41,7 +33,7 @@ namespace Jobs
 			Entry(Arg);  // We will never return here.
 		}, Owner };
 
-#if PLATFORM_WINDOWS
+#if JOBS_PLATFORM_WINDOWS
 		SetThreadAffinityMask(ThreadHandle.native_handle(), static_cast<size_t>(1) << InID);
 
 #if _DEBUG || NDEBUG

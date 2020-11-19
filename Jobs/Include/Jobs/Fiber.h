@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <Jobs/Platform.h>
+
 #include <atomic>  // std::atomic_flag
 #include <cstddef>  // std::size_t
 #include <memory>  // std::shared_ptr

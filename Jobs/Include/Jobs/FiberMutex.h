@@ -8,7 +8,7 @@ namespace Jobs
 {
 	class Manager;
 
-	// Fiber-compatible mutex, prevents deadlocking of the underlying worker.
+	// Fiber-safe mutex, prevents deadlocking of the underlying worker.
 	// Satisfies named requirements of Lockable.
 	class FiberMutex
 	{

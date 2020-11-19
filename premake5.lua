@@ -76,14 +76,6 @@ project "Jobs"
 	
 	targetname "Jobs"
 	
-	filter { "system:windows" }
-		defines { "JOBS_PLATFORM_WINDOWS=1", "JOBS_PLATFORM_POSIX=0" }
-		
-	filter { "system:linux" }
-		defines { "JOBS_PLATFORM_WINDOWS=0", "JOBS_PLATFORM_POSIX=1" }
-		
-	filter {}
-	
 	includedirs { "Jobs/Include" }
 	
 	if EnableLogging then
