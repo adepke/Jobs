@@ -35,17 +35,15 @@ namespace Jobs
 
 #if JOBS_PLATFORM_WINDOWS
 		SetThreadAffinityMask(ThreadHandle.native_handle(), static_cast<size_t>(1) << InID);
-
-#if _DEBUG || NDEBUG
 		SetThreadDescription(ThreadHandle.native_handle(), L"Jobs Worker");
-#endif
-
 #else
 		cpu_set_t CPUSet;
 		CPU_ZERO(&CPUSet);
 		CPU_SET(InID, &CPUSet);
 
 		JOBS_ASSERT(pthread_setaffinity_np(ThreadHandle.native_handle(), sizeof(CPUSet), &CPUSet) == 0, "Error occurred in pthread_setaffinity_np().");
+
+		pthread_setname_np(ThreadHandle.native_handle(), "Jobs Worker");
 #endif
 	}
 
