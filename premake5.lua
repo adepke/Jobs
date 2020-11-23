@@ -91,7 +91,7 @@ project "Jobs"
 		defines { "JOBS_ENABLE_PROFILING=0" }
 	end
 	
-	files { "Jobs/Include/Jobs/*.h", "Jobs/Source/*.cpp" }
+	files { "Jobs/Include/Jobs/*.h", "Jobs/Include/Jobs/*/*.h", "Jobs/Source/*.cpp" }
 	
 	if EnableProfiling then
 		filter { "system:windows", "configurations:Debug" }
@@ -112,6 +112,9 @@ project "Jobs"
 		links { "pthread" }
 	
 	filter {}
+	
+	-- Assemble and link fiber routines.
+	include "Jobs/ThirdParty/boost.context"
 	
 if EnableProfiling then
 	project "Profiling"
