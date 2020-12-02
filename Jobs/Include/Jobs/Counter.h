@@ -4,6 +4,7 @@
 
 #include <atomic>  // std::atomic
 #include <mutex>  // std::mutex
+#include <Jobs/Fiber.h>
 #include <Jobs/Futex.h>
 #include <Jobs/FutexConditionVariable.h>
 
@@ -12,7 +13,7 @@ namespace Jobs
 	template <typename T = unsigned int>
 	class Counter
 	{
-		friend void ManagerFiberEntry(void*);
+		friend void ManagerFiberEntry(FiberTransfer);
 
 	public:
 		using Type = T;

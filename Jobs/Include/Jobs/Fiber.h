@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <Jobs/FiberRoutines.h>
 #include <Jobs/Platform.h>
 
 #include <atomic>  // std::atomic_flag
@@ -16,11 +17,14 @@ namespace Jobs
 
 	class Fiber
 	{
-		using EntryType = void(*)(void*);
+		friend void ManagerFiberEntry(FiberTransfer);
+
+		using EntryType = void(*)(FiberTransfer);
 
 	private:
 		void* Context = nullptr;
-		Manager* Owner = nullptr;
+		void* Stack = nullptr;
+		void* Data = nullptr;
 
 	public:
 		bool WaitPoolPriority = false;  // Used for alternating wait pool. Does not need to be atomic.
@@ -30,7 +34,7 @@ namespace Jobs
 		FiberMutex* Mutex = nullptr;  // Used to determine if we're waiting on a mutex.
 
 	public:
-		Fiber() = default;  // Used for converting a thread to a fiber.
+		Fiber() = default;
 		Fiber(size_t StackSize, EntryType Entry, Manager* InOwner);
 		Fiber(const Fiber&) = delete;
 		Fiber(Fiber&& Other) noexcept;
@@ -39,10 +43,8 @@ namespace Jobs
 		Fiber& operator=(const Fiber&) = delete;
 		Fiber& operator=(Fiber&& Other) noexcept;
 
-		void Schedule(const Fiber& From);
+		void Schedule();
 
 		void Swap(Fiber& Other) noexcept;
-
-		static Fiber* FromThisThread(void* Arg);
 	};
 }

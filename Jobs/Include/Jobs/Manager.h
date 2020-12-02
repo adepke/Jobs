@@ -25,12 +25,12 @@ namespace Jobs
 	{
 		friend class Worker;
 		friend class FiberMutex;
-		friend void ManagerWorkerEntry(Manager*);
-		friend void ManagerFiberEntry(void*);
+		friend void ManagerWorkerEntry(FiberTransfer);
+		friend void ManagerFiberEntry(FiberTransfer);
 
 		// #TODO: Move these into template traits.
-		static constexpr size_t FiberCount = 64;
-		static constexpr size_t FiberStackSize = 1024 * 1024;  // 1 MB
+		static constexpr size_t FiberCount = 256;
+		static constexpr size_t FiberStackSize = 64 * 1024;  // 64 kB
 
 	private:
 		std::vector<Worker> Workers;

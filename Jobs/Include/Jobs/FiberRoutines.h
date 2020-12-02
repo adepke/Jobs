@@ -10,7 +10,7 @@ namespace Jobs
         void* data;
     };
 
-    // Routines defined in assembly.
+    // Routines implemented in assembly.
     extern "C" void* make_fcontext(void* stack, size_t stackSize, void (*entry)(FiberTransfer transfer));
-    extern "C" FiberTransfer jump_fcontext(void* to, void*);
+    extern "C" FiberTransfer jump_fcontext(void* to, void* data);
 }

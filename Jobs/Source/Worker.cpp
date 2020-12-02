@@ -24,14 +24,13 @@ namespace Jobs
 
 		JOBS_ASSERT(InOwner, "Worker constructor needs a valid owner.");
 
-		ThreadHandle = std::thread{ [this, Entry](auto* Arg)
+		// Create the worker fiber. This is a fire-once, so we don't care about the context invalidation.
+		ThreadFiber = new Fiber{ Manager::FiberStackSize, Entry, Owner };
+
+		ThreadHandle = std::thread{ [this]()
 		{
-			ThreadFiber = Fiber::FromThisThread(nullptr);
-
-			Ready.store(true, std::memory_order_seq_cst);  // We saved the thread fiber pointer, the worker can now move us.
-
-			Entry(Arg);  // We will never return here.
-		}, Owner };
+			ThreadFiber->Schedule();  // Schedule our fiber from a new thread. We will resume here once the worker is shutdown.
+		} };
 
 #if JOBS_PLATFORM_WINDOWS
 		SetThreadAffinityMask(ThreadHandle.native_handle(), static_cast<size_t>(1) << InID);

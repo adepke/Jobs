@@ -15,7 +15,7 @@ namespace Jobs
 	class Job
 	{
 		friend class Manager;
-		friend void ManagerFiberEntry(void*);
+		friend void ManagerFiberEntry(FiberTransfer);
 
 	public:
 		using EntryType = void(*)(Manager*, void*);

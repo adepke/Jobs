@@ -16,10 +16,9 @@ namespace Jobs
 
 	class Worker
 	{
-		using EntryType = void(*)(Manager*);
+		using EntryType = void(*)(FiberTransfer);
 
 	private:
-		std::atomic_bool Ready;
 		Manager* Owner = nullptr;
 		std::thread ThreadHandle;
 		size_t ID;  // Manager-specific ID.
@@ -45,7 +44,6 @@ namespace Jobs
 
 		size_t FiberIndex = InvalidFiberIndex;  // Index into the owner's fiber pool that we're executing. We need this for rescheduling the thread fiber.
 
-		bool IsReady() const { return Ready.load(std::memory_order_acquire); }
 		std::thread& GetHandle() { return ThreadHandle; }
 		std::thread::id GetNativeID() const { return ThreadHandle.get_id(); }
 		size_t GetID() const { return ID; }
