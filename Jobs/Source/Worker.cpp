@@ -24,12 +24,13 @@ namespace Jobs
 
 		JOBS_ASSERT(InOwner, "Worker constructor needs a valid owner.");
 
-		// Create the worker fiber. This is a fire-once, so we don't care about the context invalidation.
 		ThreadFiber = new Fiber{ Manager::FiberStackSize, Entry, Owner };
 
 		ThreadHandle = std::thread{ [this]()
 		{
 			ThreadFiber->Schedule();  // Schedule our fiber from a new thread. We will resume here once the worker is shutdown.
+
+			JOBS_LOG(LogLevel::Log, "Worker fiber returned, shutting down kernel fiber");
 		} };
 
 #if JOBS_PLATFORM_WINDOWS
@@ -59,6 +60,8 @@ namespace Jobs
 		{
 			ThreadHandle.join();
 		}
+
+		delete ThreadFiber;
 	}
 
 	void Worker::Swap(Worker& Other) noexcept

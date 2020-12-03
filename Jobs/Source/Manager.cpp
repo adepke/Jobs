@@ -30,10 +30,10 @@ namespace Jobs
 		auto NextFiberIndex{ Owner->GetAvailableFiber() };
 		JOBS_ASSERT(Owner->IsValidID(NextFiberIndex), "Failed to retrieve an available fiber from worker.");
 
-		Representation.FiberIndex = NextFiberIndex;
-
-		// Schedule the fiber, which executes the work. We will resume here when the manager is shutting down.
-		Owner->Fibers[NextFiberIndex].first.Schedule();
+		auto& NextFiber = Owner->Fibers[NextFiberIndex];
+		NextFiber.first.PreviousFiberIndex = std::numeric_limits<size_t>::max() - 1;  // Magic value that tells the fiber it's direct-scheduled.
+		Representation.FiberIndex = NextFiberIndex;  // Update the fiber index.
+		NextFiber.first.Schedule();
 
 		JOBS_LOG(LogLevel::Log, "Worker Shutdown | ID: %i", Representation.GetID());
 
@@ -43,12 +43,23 @@ namespace Jobs
 
 	void ManagerFiberEntry(FiberTransfer Transfer)
 	{
-		void* WorkerFiberCache = Transfer.context;  // We need to push the original worker fiber on the stack, otherwise it gets lost when rescheduling.
 		void* Data = Transfer.data;
 
 		JOBS_ASSERT(Data, "Manager fiber entry missing data.");
 
 		auto* Owner = reinterpret_cast<Manager*>(Data);
+
+		// Before anything, we need to fix up the invalidated worker fiber if we were directly scheduled.
+
+		const auto FirstThisThreadID = Owner->GetThisThreadID();
+		auto& FirstThisFiber{ Owner->Fibers[Owner->Workers[FirstThisThreadID].FiberIndex] };
+		if (FirstThisFiber.first.PreviousFiberIndex == std::numeric_limits<size_t>::max() - 1)  // Magic value for a direct-schedule.
+		{
+			FirstThisFiber.first.PreviousFiberIndex = Manager::InvalidID;
+
+			auto& FirstThisWorker = Owner->Workers[FirstThisThreadID];
+			FirstThisWorker.GetThreadFiber().Context = Transfer.context;
+		}
 
 		while (Owner->CanContinue())
 		{
@@ -215,8 +226,10 @@ namespace Jobs
 			}
 		}
 
+		const auto& ThisWorker = Owner->Workers[Owner->GetThisThreadID()];
+
 		// End of fiber lifetime, we are switching out to the worker thread to perform any final cleanup. We cannot be scheduled again beyond this point.
-		jump_fcontext(WorkerFiberCache, nullptr);
+		jump_fcontext(ThisWorker.GetThreadFiber().Context, nullptr);
 
 		JOBS_ASSERT(false, "Dead fiber was rescheduled.");
 	}

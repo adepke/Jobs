@@ -42,7 +42,7 @@ namespace Jobs
 			return *this;
 		}
 
-		size_t FiberIndex = InvalidFiberIndex;  // Index into the owner's fiber pool that we're executing. We need this for rescheduling the thread fiber.
+		size_t FiberIndex = InvalidFiberIndex;  // Index into the owner's fiber pool that we're executing. Allows for fibers to become aware of their own ID.
 
 		std::thread& GetHandle() { return ThreadHandle; }
 		std::thread::id GetNativeID() const { return ThreadHandle.get_id(); }
