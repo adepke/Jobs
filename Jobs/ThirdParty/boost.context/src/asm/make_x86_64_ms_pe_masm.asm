@@ -4,6 +4,8 @@
 ;     (See accompanying file LICENSE_1_0.txt or copy at
 ;           http://www.boost.org/LICENSE_1_0.txt)
 
+; Modified by Andrew Depke to restore the ability to schedule fibers without invalidation.
+
 ;  ----------------------------------------------------------------------------------
 ;  |     0   |     1   |     2    |     3   |     4   |     5   |     6   |     7   |
 ;  ----------------------------------------------------------------------------------
@@ -99,11 +101,11 @@ make_fcontext PROC BOOST_CONTEXT_EXPORT FRAME
     and  rax, -16
 
     ; reserve space for context-data on context-stack
+    ; size for fc_mxcsr .. RIP + return-address for context-function
     ; on context-function entry: (RSP -0x8) % 16 == 0
     sub  rax, 0150h
 
     ; third arg of make_fcontext() == address of context-function
-    ; stored in RBX
     mov  [rax+0100h], r8
 
     ; first arg of make_fcontext() == top of context-stack
@@ -126,11 +128,6 @@ make_fcontext PROC BOOST_CONTEXT_EXPORT FRAME
     stmxcsr  [rax+0a0h]
     ; save x87 control-word
     fnstcw  [rax+0a4h]
-
-    ; compute address of transport_t
-    lea rcx, [rax+0140h]
-    ; store address of transport_t in hidden field
-    mov [rax+0110h], rcx
 
     ; compute abs address of label trampoline
     lea  rcx, trampoline

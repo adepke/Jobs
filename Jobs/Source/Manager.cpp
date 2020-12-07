@@ -10,10 +10,8 @@
 
 namespace Jobs
 {
-	void ManagerWorkerEntry(FiberTransfer Transfer)
+	void ManagerWorkerEntry(void* Data)
 	{
-		void* ParentFiberCache = Transfer.context;  // Push the parent fiber on the stack, otherwise it will be overwritten when scheduling the next fiber.
-		void* Data = Transfer.data;
 		auto* Owner = reinterpret_cast<Manager*>(Data);
 
 		JOBS_ASSERT(Owner, "Manager thread entry missing owner.");
@@ -31,35 +29,19 @@ namespace Jobs
 		JOBS_ASSERT(Owner->IsValidID(NextFiberIndex), "Failed to retrieve an available fiber from worker.");
 
 		auto& NextFiber = Owner->Fibers[NextFiberIndex];
-		NextFiber.first.PreviousFiberIndex = std::numeric_limits<size_t>::max() - 1;  // Magic value that tells the fiber it's direct-scheduled.
 		Representation.FiberIndex = NextFiberIndex;  // Update the fiber index.
-		NextFiber.first.Schedule();
+		NextFiber.first.Schedule(Representation.GetThreadFiber());
 
 		JOBS_LOG(LogLevel::Log, "Worker Shutdown | ID: %i", Representation.GetID());
 
-		// Return to the host thread for shutdown.
-		jump_fcontext(ParentFiberCache, nullptr);
+		// Exit the thread, this will not return to the host thread, but instead perform standard thread exit procedure.
 	}
 
-	void ManagerFiberEntry(FiberTransfer Transfer)
+	void ManagerFiberEntry(void* Data)
 	{
-		void* Data = Transfer.data;
-
 		JOBS_ASSERT(Data, "Manager fiber entry missing data.");
 
 		auto* Owner = reinterpret_cast<Manager*>(Data);
-
-		// Before anything, we need to fix up the invalidated worker fiber if we were directly scheduled.
-
-		const auto FirstThisThreadID = Owner->GetThisThreadID();
-		auto& FirstThisFiber{ Owner->Fibers[Owner->Workers[FirstThisThreadID].FiberIndex] };
-		if (FirstThisFiber.first.PreviousFiberIndex == std::numeric_limits<size_t>::max() - 1)  // Magic value for a direct-schedule.
-		{
-			FirstThisFiber.first.PreviousFiberIndex = Manager::InvalidID;
-
-			auto& FirstThisWorker = Owner->Workers[FirstThisThreadID];
-			FirstThisWorker.GetThreadFiber().Context = Transfer.context;
-		}
 
 		while (Owner->CanContinue())
 		{
@@ -72,9 +54,6 @@ namespace Jobs
 			{
 				ThisFiber.first.PreviousFiberIndex = Manager::InvalidID;  // Reset.
 				auto& PreviousFiber{ Owner->Fibers[PreviousFiberIndex] };
-
-				// We're back, first fix up the invalidated fiber pointer.
-				PreviousFiber.first.Context = Transfer.context;
 
 				// Next make sure we restore availability to the fiber that scheduled us or enqueue it in the wait pool.
 				if (PreviousFiber.first.NeedsWaitEnqueue)
@@ -123,7 +102,7 @@ namespace Jobs
 								ThisFiber.first.NeedsWaitEnqueue = true;  // We are waiting on a dependency, so make sure we get added to the wait pool.
 								NextFiber.PreviousFiberIndex = ThisNewThread.FiberIndex;
 								ThisNewThread.FiberIndex = NextFiberIndex;  // Update the fiber index.
-								NextFiber.Schedule();
+								NextFiber.Schedule(ThisFiber.first);
 
 								JOBS_LOG(LogLevel::Log, "Job resumed from wait pool, re-evaluating dependencies.");
 
@@ -135,9 +114,6 @@ namespace Jobs
 								{
 									ThisFiber.first.PreviousFiberIndex = Manager::InvalidID;  // Reset. Skipping this will cause a double-cleanup on the next loop beginning if the dependency doesn't hold.
 									auto& PreviousFiber{ Owner->Fibers[PreviousFiberIndex] };
-
-									// We're back, first fix up the invalidated fiber pointer.
-									PreviousFiber.first.Context = Transfer.context;
 
 									if (PreviousFiber.first.NeedsWaitEnqueue)
 									{
@@ -202,7 +178,7 @@ namespace Jobs
 
 						WaitingFiber.PreviousFiberIndex = ThisThread.FiberIndex;
 						ThisThread.FiberIndex = WaitingFiberIndex;
-						WaitingFiber.Schedule();  // Schedule the waiting fiber. We're not a waiter, so we'll be marked as available.
+						WaitingFiber.Schedule(ThisFiber.first);  // Schedule the waiting fiber. We're not a waiter, so we'll be marked as available.
 					}
 				}
 			}
@@ -229,7 +205,7 @@ namespace Jobs
 		const auto& ThisWorker = Owner->Workers[Owner->GetThisThreadID()];
 
 		// End of fiber lifetime, we are switching out to the worker thread to perform any final cleanup. We cannot be scheduled again beyond this point.
-		jump_fcontext(ThisWorker.GetThreadFiber().Context, nullptr);
+		ThisWorker.GetThreadFiber().Schedule(Owner->Fibers[ThisWorker.FiberIndex].first);
 
 		JOBS_ASSERT(false, "Dead fiber was rescheduled.");
 	}

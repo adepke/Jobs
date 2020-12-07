@@ -13,7 +13,7 @@ namespace Jobs
 	template <typename T = unsigned int>
 	class Counter
 	{
-		friend void ManagerFiberEntry(FiberTransfer);
+		friend void ManagerFiberEntry(void*);
 
 	public:
 		using Type = T;

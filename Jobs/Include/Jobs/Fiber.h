@@ -17,9 +17,9 @@ namespace Jobs
 
 	class Fiber
 	{
-		friend void ManagerFiberEntry(FiberTransfer);
+		friend void ManagerFiberEntry(void*);
 
-		using EntryType = void(*)(FiberTransfer);
+		using EntryType = void(*)(void*);
 
 	private:
 		void* Context = nullptr;
@@ -43,7 +43,7 @@ namespace Jobs
 		Fiber& operator=(const Fiber&) = delete;
 		Fiber& operator=(Fiber&& Other) noexcept;
 
-		void Schedule();
+		void Schedule(Fiber& From);
 
 		void Swap(Fiber& Other) noexcept;
 	};

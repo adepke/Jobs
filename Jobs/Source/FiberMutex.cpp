@@ -26,7 +26,7 @@ void Jobs::FiberMutex::lock()
 		ThisFiber.first.NeedsWaitEnqueue = true;  // We're now waiting on a mutex, so make sure we end up in the wait queue.
 		NextFiber.PreviousFiberIndex = ThisWorker.FiberIndex;
 		ThisWorker.FiberIndex = NextFiberIndex;  // Update the fiber index.
-		NextFiber.Schedule();
+		NextFiber.Schedule(ThisFiber.first);
 
 		// We'll return here when we have acquired the mutex (locked directly via external fiber).
 	}

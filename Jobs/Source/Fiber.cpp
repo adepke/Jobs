@@ -67,13 +67,13 @@ namespace Jobs
 		return *this;
 	}
 
-	void Fiber::Schedule()
+	void Fiber::Schedule(Fiber& From)
 	{
 		JOBS_SCOPED_STAT("Fiber Schedule");
 
 		JOBS_LOG(LogLevel::Log, "Scheduling fiber.");
 
-		jump_fcontext(Context, Data);
+		jump_fcontext(&From.Context, Context, Data);
 	}
 
 	void Fiber::Swap(Fiber& Other) noexcept

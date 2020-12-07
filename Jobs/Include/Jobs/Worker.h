@@ -16,7 +16,7 @@ namespace Jobs
 
 	class Worker
 	{
-		using EntryType = void(*)(FiberTransfer);
+		using EntryType = void(*)(void*);
 
 	private:
 		Manager* Owner = nullptr;

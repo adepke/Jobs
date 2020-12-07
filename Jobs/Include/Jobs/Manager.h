@@ -25,8 +25,8 @@ namespace Jobs
 	{
 		friend class Worker;
 		friend class FiberMutex;
-		friend void ManagerWorkerEntry(FiberTransfer);
-		friend void ManagerFiberEntry(FiberTransfer);
+		friend void ManagerWorkerEntry(void*);
+		friend void ManagerFiberEntry(void*);
 
 		// #TODO: Move these into template traits.
 		static constexpr size_t FiberCount = 256;

@@ -4,6 +4,8 @@
 ;     (See accompanying file LICENSE_1_0.txt or copy at
 ;           http://www.boost.org/LICENSE_1_0.txt)
 
+; Modified by Andrew Depke to restore the ability to schedule fibers without invalidation.
+
 ;  ----------------------------------------------------------------------------------
 ;  |     0   |     1   |     2    |     3   |     4   |     5   |     6   |     7   |
 ;  ----------------------------------------------------------------------------------
@@ -132,10 +134,8 @@ ENDIF
     mov [rsp+0100h], rbx  ; save RBX
     mov [rsp+0108h], rbp  ; save RBP
 
-    mov [rsp+0110h], rcx  ; save hidden address of transport_t
-
-    ; preserve RSP (pointing to context-data) in R9
-    mov  r9, rsp
+    ; store RSP (pointing to context-data) in RCX
+    mov  [rcx], rsp
 
     ; restore RSP (pointing to context-data) from RDX
     mov  rsp, rdx
@@ -182,22 +182,14 @@ ENDIF
     mov rbx, [rsp+0100h]  ; restore RBX
     mov rbp, [rsp+0108h]  ; restore RBP
 
-    mov rax, [rsp+0110h] ; restore hidden address of transport_t
-
     ; prepare stack
     lea rsp, [rsp+0118h]
 
     ; load return-address
     pop  r10
 
-    ; transport_t returned in RAX
-    ; return parent fcontext_t
-    mov  [rax], r9
-    ; return data
-    mov  [rax+08h], r8
-
-    ; transport_t as 1.arg of context-function
-    mov  rcx,  rax
+    ; use third arg as first arg in context function
+    mov rcx, r8
 
     ; indirect jump to context
     jmp  r10

@@ -24,12 +24,14 @@ namespace Jobs
 
 		JOBS_ASSERT(InOwner, "Worker constructor needs a valid owner.");
 
+		Fiber BaseFiber;  // Holds the real thread fiber.
 		ThreadFiber = new Fiber{ Manager::FiberStackSize, Entry, Owner };
 
-		ThreadHandle = std::thread{ [this]()
+		ThreadHandle = std::thread{ [this, &BaseFiber]()
 		{
-			ThreadFiber->Schedule();  // Schedule our fiber from a new thread. We will resume here once the worker is shutdown.
+			ThreadFiber->Schedule(BaseFiber);  // Schedule our fiber from a new thread. We will never resume.
 
+			// #TEMP: Should never get here!
 			JOBS_LOG(LogLevel::Log, "Worker fiber returned, shutting down kernel fiber");
 		} };
 
