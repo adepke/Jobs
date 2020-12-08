@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 namespace Jobs
 {
     // Routines implemented in assembly.

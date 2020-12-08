@@ -18,6 +18,7 @@
 #include <map>  // std::map
 #include <type_traits>  // std::is_same, std::decay
 #include <optional>  // std::optional
+#include <new>  // std::hardware_destructive_interference_size
 
 namespace Jobs
 {
