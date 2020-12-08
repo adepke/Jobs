@@ -122,27 +122,6 @@ namespace Jobs
 
 	template <typename T>
 	template <typename Rep, typename Period>
-	bool Counter<T>::WaitFor(T ExpectedValue, const std::chrono::duration<Rep, Period>& Timeout)
-	{
-		const auto Start{ std::chrono::system_clock::now() };
-
-		while (!Evaluate(ExpectedValue))
-		{
-			OutsideLock.Lock();
-			bool Result{ OutsideLock.WaitFor(Timeout) };
-			OutsideLock.Unlock();
-
-			if (!Result || std::chrono::system_clock::now() - Start >= Timeout)
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	template <typename T>
-	template <typename Rep, typename Period>
 	bool Counter<T>::UnsafeWait(T ExpectedValue, const std::chrono::duration<Rep, Period>& Timeout)
 	{
 		// InternalCapture is the saved state of Internal at the time of sleeping. We will use this to know if it changed.
