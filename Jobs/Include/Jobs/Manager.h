@@ -22,6 +22,15 @@
 
 namespace Jobs
 {
+	namespace Detail
+	{
+#ifdef __cpp_lib_hardware_interference_size
+		constexpr auto HardwareDestructiveInterference = std::hardware_destructive_interference_size;
+#else
+		constexpr auto HardwareDestructiveInterference = 64;
+#endif
+	}
+
 	class Manager
 	{
 		friend class Worker;
@@ -41,12 +50,12 @@ namespace Jobs
 		static constexpr auto InvalidID = std::numeric_limits<size_t>::max();
 
 		std::atomic_bool Ready;
-		alignas(std::hardware_destructive_interference_size) std::atomic_bool Shutdown;
+		alignas(Detail::HardwareDestructiveInterference) std::atomic_bool Shutdown;
 
 		// Used to cycle the worker thread to enqueue in.
 		std::atomic_uint EnqueueIndex;
 
-		alignas(std::hardware_destructive_interference_size) FutexConditionVariable QueueCV;
+		alignas(Detail::HardwareDestructiveInterference) FutexConditionVariable QueueCV;
 
 		// #TODO: Use a more efficient hash map data structure.
 		std::map<std::string, std::shared_ptr<Counter<>>> GroupMap;
