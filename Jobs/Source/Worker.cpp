@@ -30,9 +30,6 @@ namespace Jobs
 		threadHandle = std::thread{ [this, &baseFiber]()
 		{
 			threadFiber->Schedule(baseFiber);  // Schedule our fiber from a new thread. We will never resume.
-
-			// #TEMP: Should never get here!
-			JOBS_LOG(LogLevel::Log, "Worker fiber returned, shutting down kernel fiber");
 		} };
 
 #if JOBS_PLATFORM_WINDOWS
