@@ -13,11 +13,11 @@ namespace Jobs
 	class FiberMutex
 	{
 	private:
-		Manager* Owner = nullptr;
-		std::atomic_flag Flag = ATOMIC_FLAG_INIT;
+		Manager* owner = nullptr;
+		std::atomic_flag flag = ATOMIC_FLAG_INIT;
 
 	public:
-		FiberMutex(Manager* InOwner) : Owner(InOwner) {}
+		FiberMutex(Manager* inOwner) : owner(inOwner) {}
 		~FiberMutex() = default;
 
 		FiberMutex(const FiberMutex&) = delete;

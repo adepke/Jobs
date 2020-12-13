@@ -4,13 +4,13 @@
 
 #if JOBS_PLATFORM_WINDOWS
   #include <Jobs/WindowsMinimal.h>
-  static_assert(sizeof(CRITICAL_SECTION) == Jobs::SizeOfUserSpaceLock, "Invalid CRITICAL_SECTION size! Header requires update.");
-  static_assert(sizeof(CONDITION_VARIABLE) == Jobs::SizeOfConditionVariable, "Invalid CONDITION_VARIABLE size! Header requires update.");
+  static_assert(sizeof(CRITICAL_SECTION) == Jobs::sizeOfUserSpaceLock, "Invalid CRITICAL_SECTION size! Header requires update.");
+  static_assert(sizeof(CONDITION_VARIABLE) == Jobs::sizeOfConditionVariable, "Invalid CONDITION_VARIABLE size! Header requires update.");
 #endif
 #if JOBS_PLATFORM_POSIX
   #include <pthread.h>
-  static_assert(sizeof(pthread_mutex_t) == Jobs::SizeOfUserSpaceLock, "Invalid pthread_mutex_t size! Header requires update.");
-  static_assert(sizeof(pthread_cond_t) == Jobs::SizeOfConditionVariable, "Invalid pthread_cond_t size! Header requires update.");
+  static_assert(sizeof(pthread_mutex_t) == Jobs::sizeOfUserSpaceLock, "Invalid pthread_mutex_t size! Header requires update.");
+  static_assert(sizeof(pthread_cond_t) == Jobs::sizeOfConditionVariable, "Invalid pthread_cond_t size! Header requires update.");
 #endif
 
 namespace Jobs
@@ -18,30 +18,30 @@ namespace Jobs
 	FutexConditionVariable::FutexConditionVariable()
 	{
 #if JOBS_PLATFORM_WINDOWS
-		InitializeCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(UserSpaceLock));
-		SetCriticalSectionSpinCount(reinterpret_cast<CRITICAL_SECTION*>(UserSpaceLock), 2000);
+		InitializeCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(userSpaceLock));
+		SetCriticalSectionSpinCount(reinterpret_cast<CRITICAL_SECTION*>(userSpaceLock), 2000);
 
-		InitializeConditionVariable(reinterpret_cast<CONDITION_VARIABLE*>(ConditionVariable));
+		InitializeConditionVariable(reinterpret_cast<CONDITION_VARIABLE*>(conditionVariable));
 #else
-		*reinterpret_cast<pthread_mutex_t*>(UserSpaceLock) = PTHREAD_MUTEX_INITIALIZER;
-		*reinterpret_cast<pthread_cond_t*>(ConditionVariable) = PTHREAD_COND_INITIALIZER;
+		*reinterpret_cast<pthread_mutex_t*>(userSpaceLock) = PTHREAD_MUTEX_INITIALIZER;
+		*reinterpret_cast<pthread_cond_t*>(conditionVariable) = PTHREAD_COND_INITIALIZER;
 #endif
 	}
 
 	FutexConditionVariable::~FutexConditionVariable()
 	{
 #if JOBS_PLATFORM_WINDOWS
-		DeleteCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(UserSpaceLock));
+		DeleteCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(userSpaceLock));
 #else
-		pthread_mutex_destroy(reinterpret_cast<pthread_mutex_t*>(UserSpaceLock));
-		pthread_cond_destroy(reinterpret_cast<pthread_cond_t*>(ConditionVariable));
+		pthread_mutex_destroy(reinterpret_cast<pthread_mutex_t*>(userSpaceLock));
+		pthread_cond_destroy(reinterpret_cast<pthread_cond_t*>(conditionVariable));
 #endif
 	}
 
 	void FutexConditionVariable::Lock()
 	{
 #if JOBS_PLATFORM_WINDOWS
-		EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(UserSpaceLock));
+		EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(userSpaceLock));
 #else
 #endif
 	}
@@ -49,7 +49,7 @@ namespace Jobs
 	void FutexConditionVariable::Unlock()
 	{
 #if JOBS_PLATFORM_WINDOWS
-		LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(UserSpaceLock));
+		LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(userSpaceLock));
 #else
 #endif
 	}
@@ -57,7 +57,7 @@ namespace Jobs
 	void FutexConditionVariable::Wait()
 	{
 #if JOBS_PLATFORM_WINDOWS
-		SleepConditionVariableCS(reinterpret_cast<CONDITION_VARIABLE*>(ConditionVariable), reinterpret_cast<CRITICAL_SECTION*>(UserSpaceLock), INFINITE);
+		SleepConditionVariableCS(reinterpret_cast<CONDITION_VARIABLE*>(conditionVariable), reinterpret_cast<CRITICAL_SECTION*>(userSpaceLock), INFINITE);
 #else
 #endif
 	}
@@ -65,7 +65,7 @@ namespace Jobs
 	void FutexConditionVariable::NotifyOne()
 	{
 #if JOBS_PLATFORM_WINDOWS
-		WakeConditionVariable(reinterpret_cast<CONDITION_VARIABLE*>(ConditionVariable));
+		WakeConditionVariable(reinterpret_cast<CONDITION_VARIABLE*>(conditionVariable));
 #else
 #endif
 	}
@@ -73,7 +73,7 @@ namespace Jobs
 	void FutexConditionVariable::NotifyAll()
 	{
 #if JOBS_PLATFORM_WINDOWS
-		WakeAllConditionVariable(reinterpret_cast<CONDITION_VARIABLE*>(ConditionVariable));
+		WakeAllConditionVariable(reinterpret_cast<CONDITION_VARIABLE*>(conditionVariable));
 #else
 #endif
 	}

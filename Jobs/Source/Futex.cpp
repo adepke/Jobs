@@ -17,18 +17,18 @@
 
 namespace Jobs
 {
-	bool Futex::Wait(void* CompareAddress, size_t Size, uint64_t TimeoutNs) const
+	bool Futex::Wait(void* compareAddress, size_t size, uint64_t timeoutNs) const
 	{
 		JOBS_SCOPED_STAT("Futex Wait");
 
 #if JOBS_PLATFORM_WINDOWS
-		return WaitOnAddress(Address, CompareAddress, Size, static_cast<DWORD>(TimeoutNs > 0 ? (TimeoutNs >= 1e6 ? TimeoutNs : 1e6) / 1e6 : INFINITE));
+		return WaitOnAddress(address, compareAddress, size, static_cast<DWORD>(timeoutNs > 0 ? (timeoutNs >= 1e6 ? timeoutNs : 1e6) / 1e6 : INFINITE));
 #else
-		timespec Timeout;
-		Timeout.tv_sec = static_cast<time_t>(TimeoutNs / (uint64_t)1e9);  // Whole seconds.
-		Timeout.tv_nsec = static_cast<long>(TimeoutNs % (uint64_t)1e9);  // Remaining nano seconds.
+		timespec timeout;
+		timeout.tv_sec = static_cast<time_t>(timeoutNs / (uint64_t)1e9);  // Whole seconds.
+		timeout.tv_nsec = static_cast<long>(timeoutNs % (uint64_t)1e9);  // Remaining nano seconds.
 
-		syscall(SYS_futex, CompareAddress, FUTEX_WAIT, &Address, TimeoutNs > 0 ? &Timeout : nullptr, nullptr, 0);
+		syscall(SYS_futex, compareAddress, FUTEX_WAIT, &address, timeoutNs > 0 ? &timeout : nullptr, nullptr, 0);
 #endif
 	}
 
@@ -36,12 +36,12 @@ namespace Jobs
 	{
 		JOBS_SCOPED_STAT("Futex Notify One");
 
-		if (Address)
+		if (address)
 		{
 #if JOBS_PLATFORM_WINDOWS
-			WakeByAddressSingle(Address);
+			WakeByAddressSingle(address);
 #else
-			syscall(SYS_futex, Address, FUTEX_WAKE, 1);
+			syscall(SYS_futex, address, FUTEX_WAKE, 1);
 #endif
 		}
 	}
@@ -50,12 +50,12 @@ namespace Jobs
 	{
 		JOBS_SCOPED_STAT("Futex Notify All");
 
-		if (Address)
+		if (address)
 		{
 #if JOBS_PLATFORM_WINDOWS
-			WakeByAddressAll(Address);
+			WakeByAddressAll(address);
 #else
-			syscall(SYS_futex, Address, FUTEX_WAKE, std::numeric_limits<int>::max());
+			syscall(SYS_futex, address, FUTEX_WAKE, std::numeric_limits<int>::max());
 #endif
 		}
 	}

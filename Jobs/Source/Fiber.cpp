@@ -18,12 +18,12 @@
 
 namespace Jobs
 {
-	Fiber::Fiber(size_t StackSize, EntryType Entry, Manager* InOwner) : Data(reinterpret_cast<void*>(InOwner))
+	Fiber::Fiber(size_t stackSize, EntryType entry, Manager* owner) : data(reinterpret_cast<void*>(owner))
 	{
 		JOBS_SCOPED_STAT("Fiber Creation");
 
 		JOBS_LOG(LogLevel::Log, "Building fiber.");
-		JOBS_ASSERT(StackSize > 0, "Stack size must be greater than 0.");
+		JOBS_ASSERT(stackSize > 0, "Stack size must be greater than 0.");
 
 		// Perform a page-aligned allocation for the stack. This is needed to allow for canary pages in overrun detection.
 
@@ -32,54 +32,54 @@ namespace Jobs
 		GetSystemInfo(&sysInfo);
 		const auto alignment = sysInfo.dwPageSize;
 
-		Stack = _aligned_malloc(StackSize, alignment);
+		stack = _aligned_malloc(stackSize, alignment);
 #else
 		const auto alignment = getpagesize();
 
-		Stack = std::aligned_alloc(alignment, StackSize);
+		stack = std::aligned_alloc(alignment, stackSize);
 #endif
 
-		void* StackTop = reinterpret_cast<std::byte*>(Stack) + (StackSize * sizeof(std::byte));
+		void* stackTop = reinterpret_cast<std::byte*>(stack) + (stackSize * sizeof(std::byte));
 
-		Context = make_fcontext(StackTop, StackSize, Entry);
+		context = make_fcontext(stackTop, stackSize, entry);
 
-		JOBS_ASSERT(Context, "Failed to build fiber.");
+		JOBS_ASSERT(context, "Failed to build fiber.");
 	}
 
-	Fiber::Fiber(Fiber&& Other) noexcept
+	Fiber::Fiber(Fiber&& other) noexcept
 	{
-		Swap(Other);
+		Swap(other);
 	}
 
 	Fiber::~Fiber()
 	{
 #if JOBS_PLATFORM_WINDOWS
-		_aligned_free(Stack);
+		_aligned_free(stack);
 #else
-		std::free(Stack);
+		std::free(stack);
 #endif
 	}
 
-	Fiber& Fiber::operator=(Fiber&& Other) noexcept
+	Fiber& Fiber::operator=(Fiber&& other) noexcept
 	{
-		Swap(Other);
+		Swap(other);
 
 		return *this;
 	}
 
-	void Fiber::Schedule(Fiber& From)
+	void Fiber::Schedule(Fiber& from)
 	{
 		JOBS_SCOPED_STAT("Fiber Schedule");
 
 		JOBS_LOG(LogLevel::Log, "Scheduling fiber.");
 
-		jump_fcontext(&From.Context, Context, Data);
+		jump_fcontext(&from.context, context, data);
 	}
 
-	void Fiber::Swap(Fiber& Other) noexcept
+	void Fiber::Swap(Fiber& other) noexcept
 	{
-		std::swap(Context, Other.Context);
-		std::swap(Stack, Other.Stack);
-		std::swap(Data, Other.Data);
+		std::swap(context, other.context);
+		std::swap(stack, other.stack);
+		std::swap(data, other.data);
 	}
 }

@@ -16,62 +16,63 @@
 
 namespace Jobs
 {
-	Worker::Worker(Manager* InOwner, size_t InID, EntryType Entry) : Owner(InOwner), ID(InID)
+	Worker::Worker(Manager* inOwner, size_t inID, EntryType entry) : owner(inOwner), id(inID)
 	{
 		JOBS_SCOPED_STAT("Worker Creation");
 
 		JOBS_LOG(LogLevel::Log, "Building thread.");
 
-		JOBS_ASSERT(InOwner, "Worker constructor needs a valid owner.");
+		JOBS_ASSERT(inOwner, "Worker constructor needs a valid owner.");
 
-		Fiber BaseFiber;  // Holds the real thread fiber.
-		ThreadFiber = new Fiber{ Manager::FiberStackSize, Entry, Owner };
+		Fiber baseFiber;  // Holds the real thread fiber.
+		threadFiber = new Fiber{ Manager::fiberStackSize, entry, owner };
 
-		ThreadHandle = std::thread{ [this, &BaseFiber]()
+		threadHandle = std::thread{ [this, &baseFiber]()
 		{
-			ThreadFiber->Schedule(BaseFiber);  // Schedule our fiber from a new thread. We will never resume.
+			threadFiber->Schedule(baseFiber);  // Schedule our fiber from a new thread. We will never resume.
 
 			// #TEMP: Should never get here!
 			JOBS_LOG(LogLevel::Log, "Worker fiber returned, shutting down kernel fiber");
 		} };
 
 #if JOBS_PLATFORM_WINDOWS
-		SetThreadAffinityMask(ThreadHandle.native_handle(), static_cast<size_t>(1) << InID);
-		SetThreadDescription(ThreadHandle.native_handle(), L"Jobs Worker");
+		SetThreadAffinityMask(threadHandle.native_handle(), static_cast<size_t>(1) << inID);
+		SetThreadDescription(threadHandle.native_handle(), L"Jobs Worker");
 #else
-		cpu_set_t CPUSet;
-		CPU_ZERO(&CPUSet);
-		CPU_SET(InID, &CPUSet);
+		cpu_set_t cpuSet;
+		CPU_ZERO(&cpuSet);
+		CPU_SET(inID, &cpuSet);
 
-		JOBS_ASSERT(pthread_setaffinity_np(ThreadHandle.native_handle(), sizeof(CPUSet), &CPUSet) == 0, "Error occurred in pthread_setaffinity_np().");
+		const auto result = pthread_setaffinity_np(threadHandle.native_handle(), sizeof(cpuSet), &cpuSet)
+		pthread_setname_np(threadHandle.native_handle(), "Jobs Worker");
 
-		pthread_setname_np(ThreadHandle.native_handle(), "Jobs Worker");
+		JOBS_ASSERT(result == 0, "Error occurred in pthread_setaffinity_np().");
 #endif
 	}
 
 	Worker::~Worker()
 	{
-		if (ThreadHandle.native_handle())
+		if (threadHandle.native_handle())
 		{
 			// Only log if we're not a moved worker shell.
 			JOBS_LOG(LogLevel::Log, "Destroying thread.");
 		}
 
 		// The thread may have already finished, so validate our handle first.
-		if (ThreadHandle.joinable())
+		if (threadHandle.joinable())
 		{
-			ThreadHandle.join();
+			threadHandle.join();
 		}
 
-		delete ThreadFiber;
+		delete threadFiber;
 	}
 
-	void Worker::Swap(Worker& Other) noexcept
+	void Worker::Swap(Worker& other) noexcept
 	{
-		std::swap(Owner, Other.Owner);
-		std::swap(ThreadHandle, Other.ThreadHandle);
-		std::swap(ID, Other.ID);
-		std::swap(ThreadFiber, Other.ThreadFiber);
-		std::swap(JobQueue, Other.JobQueue);
+		std::swap(owner, other.owner);
+		std::swap(threadHandle, other.threadHandle);
+		std::swap(id, other.id);
+		std::swap(threadFiber, other.threadFiber);
+		std::swap(jobQueue, other.jobQueue);
 	}
 }

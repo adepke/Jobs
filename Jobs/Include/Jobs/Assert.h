@@ -6,16 +6,16 @@
 #include <exception>  // std::terminate
 
 #if DEBUG || _DEBUG
-  #define JOBS_ASSERT(Expression, ...) \
+  #define JOBS_ASSERT(expression, ...) \
 	do \
 	{ \
-		if (!(Expression)) \
+		if (!(expression)) \
 		{ \
-			std::cerr << "Assertion \"" << #Expression << "\" failed in " << __FILE__ << ", line " << __LINE__ << ": " << __VA_ARGS__; \
+			std::cerr << "Assertion \"" << #expression << "\" failed in " << __FILE__ << ", line " << __LINE__ << ": " << __VA_ARGS__; \
 			std::terminate(); \
 		} \
 	} \
 	while (0)
 #else
-  #define JOBS_ASSERT(Expression, ...) do {} while (0)
+  #define JOBS_ASSERT(expression, ...) do {} while (0)
 #endif

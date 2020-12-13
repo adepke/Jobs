@@ -7,12 +7,12 @@
 namespace Jobs
 {
 #if JOBS_PLATFORM_WINDOWS
-	constexpr auto SizeOfUserSpaceLock = 40;
-	constexpr auto SizeOfConditionVariable = 8;
+	constexpr auto sizeOfUserSpaceLock = 40;
+	constexpr auto sizeOfConditionVariable = 8;
 #endif
 #if JOBS_PLATFORM_POSIX
-	constexpr auto SizeOfUserSpaceLock = 40;
-	constexpr auto SizeOfConditionVariable = 48;
+	constexpr auto sizeOfUserSpaceLock = 40;
+	constexpr auto sizeOfConditionVariable = 48;
 #endif
 }
 
@@ -22,8 +22,8 @@ namespace Jobs
 	{
 	private:
 		// Opaque storage.
-		unsigned char UserSpaceLock[SizeOfUserSpaceLock];
-		unsigned char ConditionVariable[SizeOfConditionVariable];
+		unsigned char userSpaceLock[sizeOfUserSpaceLock];
+		unsigned char conditionVariable[sizeOfConditionVariable];
 
 	public:
 		FutexConditionVariable();
