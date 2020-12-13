@@ -30,7 +30,7 @@ namespace Jobs
 		// List of dependencies this job needs before executing. Pairs of counters to expected values.
 		using DependencyType = std::pair<std::weak_ptr<Counter<>>, Counter<>::Type>;
 		// MSVC throws errors with the stack allocator in debugging mode, so just turn it off unless we're in an optimized build.
-#if _DEBUG || NDEBUG
+#if !NDEBUG
 		std::vector<DependencyType> dependencies;
 #else
 		std::vector<DependencyType, DependencyAllocator<DependencyType, 2>> dependencies;

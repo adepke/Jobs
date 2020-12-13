@@ -5,7 +5,7 @@
 #include <iostream>  // std::cerr
 #include <exception>  // std::terminate
 
-#if DEBUG || _DEBUG
+#if !NDEBUG
   #define JOBS_ASSERT(expression, ...) \
 	do \
 	{ \
