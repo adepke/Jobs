@@ -5,6 +5,8 @@
             http://www.boost.org/LICENSE_1_0.txt)
 */
 
+/* Modified by Andrew Depke to restore the ability to schedule fibers without invalidation. */
+
 /****************************************************************************************
  *                                                                                      *
  *  ----------------------------------------------------------------------------------  *
@@ -41,7 +43,7 @@ make_fcontext:
     leaq  -0x40(%rax), %rax
 
     /* third arg of make_fcontext() == address of context-function */
-    /* stored in RBX */
+    /* stored in RDX */
     movq  %rdx, 0x28(%rax)
 
     /* save MMX control- and status-word */
